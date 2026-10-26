@@ -277,3 +277,40 @@ describe('AI Plan Normalizer — V2-03, SEC-004', () => {
     expect(result.plan.timelineTasks[0]?.dueDate).toBe('invalid-date');
   });
 });
+
+// ─── Logger Redaction (Finding 4 / SEC-008) ──────────────────────────────────
+import { sanitize } from '../shared/logger.js';
+
+describe('Logger Redaction — Finding 4 / SEC-008', () => {
+  it('redacts sensitive fields by substring (accessToken, password_hash, groqApiKey, cookie, jwt)', () => {
+    const sensitivePayload = {
+      accessToken: 'secret-token-xyz',
+      password_hash: '$2a$12$e0M2/1a9...',
+      groqApiKey: 'gsk_1234567890',
+      userCookie: 'session=abc',
+      jwt: 'eyJhbGciOi...',
+      authorization: 'Bearer xxx',
+      briefText: 'delicate details',
+      normalField: 'visible-public-info',
+      nested: {
+        myApiKey: 'nested-key-val',
+        userPassword: 'plaintext-pass',
+      },
+    };
+
+    const sanitized = sanitize(sensitivePayload) as Record<string, unknown>;
+    expect(sanitized['accessToken']).toBe('[REDACTED]');
+    expect(sanitized['password_hash']).toBe('[REDACTED]');
+    expect(sanitized['groqApiKey']).toBe('[REDACTED]');
+    expect(sanitized['userCookie']).toBe('[REDACTED]');
+    expect(sanitized['jwt']).toBe('[REDACTED]');
+    expect(sanitized['authorization']).toBe('[REDACTED]');
+    expect(sanitized['briefText']).toBe('[REDACTED]');
+    expect(sanitized['normalField']).toBe('visible-public-info');
+
+    const nested = sanitized['nested'] as Record<string, unknown>;
+    expect(nested['myApiKey']).toBe('[REDACTED]');
+    expect(nested['userPassword']).toBe('[REDACTED]');
+  });
+});
+

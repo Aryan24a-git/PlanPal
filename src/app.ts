@@ -64,6 +64,9 @@ function validate<T>(schema: ZodSchema<T>, data: unknown): T {
 export function createApp() {
   const app = express();
 
+  // Trust proxy for reverse proxies (Render, Fly.io, Cloudflare) so rate limits use real client IPs
+  app.set('trust proxy', 1);
+
   app.use(requestLogger);
   app.use(securityHeaders);
 

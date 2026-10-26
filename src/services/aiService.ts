@@ -24,10 +24,7 @@ function createProvider(): AIProvider {
     case 'groq':
       logger.info(`AI provider: Groq (${config.GROQ_MODEL})`);
       return new GroqAIProvider();
-    case 'anthropic':
-    case 'openai':
-      logger.warn(`AI provider "${config.AI_PROVIDER}" not yet implemented, falling back to mock`);
-      return new MockAIProvider();
+    case 'mock':
     default:
       return new MockAIProvider();
   }

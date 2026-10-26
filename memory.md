@@ -102,7 +102,7 @@
 ### B. Screen Reader Auditory Verification
 | ID | Area | Code Fix Applied | 2-Minute Manual Verification Guide |
 |---|---|---|---|
-| **W-05** | **Screen Reader Auditory Pass** | Implemented W3C APG dialog focus traps, Escape key dismiss, focus return to opener, and mutation-forced `aria-live` announcer in [`public/js/app.js`](file:///e:/projects/CHALLENGE%205/public/js/app.js). | Press **`Win + Ctrl + Enter`** to turn on built-in **Windows Narrator**. Tab through `http://localhost:4000` to hear labels, buttons, and dialogs. Press **`Win + Ctrl + Enter`** again to turn off. |
+| **W-05** | **Screen Reader Auditory Pass** | Implemented W3C APG dialog focus traps, Escape key dismiss, focus return to opener, and mutation-forced `aria-live` announcer in [`public/js/app.js`](public/js/app.js). | Press **`Win + Ctrl + Enter`** to turn on built-in **Windows Narrator**. Tab through `http://localhost:4000` to hear labels, buttons, and dialogs. Press **`Win + Ctrl + Enter`** again to turn off. |
 
 ## 10. Repository & Deployment Status
 - **Git Remote**: `https://github.com/Aryan24a-git/PlanPal.git`

@@ -9,7 +9,7 @@ const ConfigSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
-  AI_PROVIDER: z.enum(['mock', 'anthropic', 'openai', 'groq']).default('mock'),
+  AI_PROVIDER: z.enum(['mock', 'groq']).default('mock'),
   GROQ_API_KEY: z.string().optional(),
   GROQ_MODEL: z.string().default('openai/gpt-oss-120b'),
   AI_DAILY_QUOTA_PER_USER: z.coerce.number().int().min(1).max(1000).default(20),
@@ -22,11 +22,21 @@ const ConfigSchema = z.object({
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
 
+const KNOWN_PLACEHOLDER_SECRETS = new Set([
+  'super-secret-dev-jwt-key-replace-in-prod-minimum-32-chars-length',
+  'production-secret-key-replace-in-env-vault-min-32-chars',
+  'change-this-in-production-min-32-chars',
+  'your-super-secret-jwt-key-minimum-32-chars-length'
+]);
+
 function loadConfig(): AppConfig {
   const result = ConfigSchema.safeParse(process.env);
   if (!result.success) {
     const issues = result.error.issues.map((e) => `  ${e.path.join('.')}: ${e.message}`).join('\n');
     throw new Error(`Invalid environment configuration:\n${issues}`);
+  }
+  if (result.data.NODE_ENV === 'production' && KNOWN_PLACEHOLDER_SECRETS.has(result.data.JWT_SECRET)) {
+    throw new Error('JWT_SECRET must not use a known default or placeholder secret in production.');
   }
   return result.data;
 }

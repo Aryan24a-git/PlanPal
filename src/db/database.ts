@@ -117,7 +117,7 @@ function applySchema(db: Database.Database): void {
       event_id       TEXT NOT NULL,
       category       TEXT NOT NULL,
       name           TEXT NOT NULL,
-      status         TEXT NOT NULL DEFAULT 'to_contact',
+      status         TEXT NOT NULL DEFAULT 'to_contact' CHECK(status IN ('to_contact','contacted','quoted','booked','declined')),
       contact_name   TEXT,
       contact_email  TEXT,
       contact_phone  TEXT,
@@ -136,7 +136,7 @@ function applySchema(db: Database.Database): void {
       description   TEXT NOT NULL,
       est_low_minor INTEGER CHECK(est_low_minor IS NULL OR est_low_minor >= 0),
       est_high_minor INTEGER CHECK(est_high_minor IS NULL OR est_high_minor >= 0),
-      state         TEXT NOT NULL DEFAULT 'suggested',
+      state         TEXT NOT NULL DEFAULT 'suggested' CHECK(state IN ('suggested','saved','dismissed')),
       FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_ideas_event ON ai_ideas(event_id);
@@ -150,7 +150,6 @@ function applySchema(db: Database.Database): void {
       UNIQUE(user_id, day),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
-    CREATE INDEX IF NOT EXISTS idx_ai_usage_user_day ON ai_usage(user_id, day);
   `);
 
   // Migration step: ensure ai_usage has modern count/day columns
@@ -166,7 +165,6 @@ function applySchema(db: Database.Database): void {
         UNIQUE(user_id, day),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
-      CREATE INDEX idx_ai_usage_user_day ON ai_usage(user_id, day);
     `);
   }
 }

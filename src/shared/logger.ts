@@ -11,11 +11,7 @@ const ALLOWED_LOG_FIELDS = new Set([
   'code', 'name', 'stack',
 ]);
 
-const REDACTED_KEYS = new Set([
-  'password', 'passwordHash', 'password_hash', 'token', 'cookie',
-  'authorization', 'apiKey', 'api_key', 'secret', 'brief',
-  'LLM_API_KEY', 'JWT_SECRET',
-]);
+const REDACT_PATTERN = /pass|token|secret|key|authorization|cookie|brief|jwt/i;
 
 function sanitize(obj: unknown, depth = 0): unknown {
   if (depth > 4) return '[deep]';
@@ -23,8 +19,7 @@ function sanitize(obj: unknown, depth = 0): unknown {
   if (Array.isArray(obj)) return obj.map((v) => sanitize(v, depth + 1));
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-    const lk = k.toLowerCase();
-    if (REDACTED_KEYS.has(k) || REDACTED_KEYS.has(lk)) {
+    if (REDACT_PATTERN.test(k)) {
       out[k] = '[REDACTED]';
     } else {
       out[k] = sanitize(v, depth + 1);
@@ -52,4 +47,4 @@ export const logger = {
   debug: (message: string, meta?: Record<string, unknown>) => log('debug', message, meta),
 };
 
-export { sanitize, REDACTED_KEYS };
+export { sanitize, REDACT_PATTERN };

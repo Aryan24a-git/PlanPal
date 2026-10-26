@@ -63,6 +63,16 @@ const tabs = {
 };
 
 // ─── Accessibility & Feedback Helpers ─────────────────────────────────────────
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function announce(message, priority = 'polite') {
   if (!announcer) return;
   announcer.setAttribute('aria-live', priority);
@@ -78,7 +88,7 @@ function showToast(message, type = 'info') {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
-  toast.innerHTML = `<span>${message}</span>`;
+  toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
   toastContainer.appendChild(toast);
   announce(message, type === 'error' ? 'assertive' : 'polite');
   setTimeout(() => {
@@ -681,8 +691,8 @@ function renderEventsList(events) {
           <span class="type-pill">${ev.type.toUpperCase()}</span>
           <span class="date-pill">${ev.event_date}</span>
         </div>
-        <h2 class="event-name">${ev.name}</h2>
-        <p class="card-brief">${ev.brief}</p>
+        <h2 class="event-name">${escapeHtml(ev.name)}</h2>
+        <p class="card-brief">${escapeHtml(ev.brief)}</p>
       </div>
       <div class="card-metrics">
         <div>
