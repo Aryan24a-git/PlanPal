@@ -102,4 +102,14 @@ describe('A11Y-001 & A11Y-002: Accessibility Standards Verification', () => {
     expect(js).toMatch(/e\.key !==? ['"]Tab['"]/);
     expect(js).toMatch(/focusable\[0\]\.focus\(\)/);
   });
+
+  it('runs axe-core audit directly with 0 WCAG 2.1 AA violations', async () => {
+    const { JSDOM } = await import('jsdom');
+    const axe = (await import('axe-core')).default;
+    const dom = new JSDOM(html);
+    const results = await axe.run(dom.window.document.documentElement, {
+      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
+    });
+    expect(results.violations).toHaveLength(0);
+  });
 });

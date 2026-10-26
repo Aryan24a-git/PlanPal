@@ -79,24 +79,27 @@
 - Daily usage quotas tracked in database per user per day.
 
 ## 8. Verified Test Executions
-- `npx vitest run`: **89 passed** (28 pure domain unit tests, 48 API integration tests, 13 automated WCAG AA accessibility tests).
-- `npx vitest run --coverage`: **99.16%** lines covered across pure domain modules (`aiNormalizer.ts`: 96.96%, `budget.ts`: 100%, `timeline.ts`: 100%, `vendors.ts`: 100%).
+- `npx vitest run`: **97 passed** across 5 test suites (pure domain unit tests, API integration tests, cross-tenant IDOR tests, automated WCAG AA accessibility tests).
+- `npx vitest run --coverage`: **97.77%** lines covered across pure domain modules (`budget.ts`: 100%, `timeline.ts`: 100%, `vendors.ts`: 100%, `aiNormalizer.ts`: 93.75%).
+- `node scripts/audit-axe.js`: **0 violations across all 6 views** (Auth, Dashboard, Budget, Timeline, Vendors, Ideas) verified by `axe-core` and recorded in `axe-audit-results.json`.
+- `node scripts/check-line-counts.js`: **100% compliant** with NFR-003 (every backend source file, client module, and test suite is ≤ 289 lines).
 - `npx tsc --noEmit`: 0 errors.
 - `npm audit`: 0 vulnerabilities.
-- `npm run build` (tsc production): 0 errors, `dist/` emitted.
-- Server smoke test: `GET /api/health → 200 {"status":"ok"}`.
-- Live E2E Server Script: 100% passed (Registration, Event Creation, AI Draft Generation, Allocation Sum Invariant, Transactional Apply, Date Shift Verification, AI Refinement Diff Proposal, Dashboard Metrics, Static Frontend Delivery).
+- `npm run build` (tsc production): 0 errors, `dist/` emitted cleanly.
+- Server smoke test: `GET /api/health → 200 {"status":"ok","database":"connected","aiProvider":"mock"}`.
+- Refusal proof: Production boot with placeholder `JWT_SECRET` refused to start with explicit security error. Missing `GROQ_API_KEY` with `AI_PROVIDER=groq` fails fast at config startup.
 
-## 9. Phase 5 Audit — Resolved Warnings & Remaining Manual Actions
+## 9. Phase 5 Audit — Resolved Warnings & Quality Gates
 
 ### A. Automatically Fixed in Codebase
 | ID | Area | Resolution | Status |
 |---|---|---|---|
-| W-01 | NFR-003 File Size | Decomposed `src/services/` into `budgetService.ts`, `planService.ts`, `eventService.ts`, and extracted `src/routes/` (`eventRoutes.ts`, `aiRoutes.ts`). **All src files are now strictly ≤ 289 lines** (under the 300-line limit). | **RESOLVED** ✅ |
+| W-01 | NFR-003 File Size | Decomposed all oversized files into modular units. **All source files and test suites are strictly ≤ 289 lines**, guarded by `scripts/check-line-counts.js` in CI. | **RESOLVED** ✅ |
 | W-02 | SEC-007 CI Scanner | Added official `gitleaks/gitleaks-action@v2` secret scanner to `.github/workflows/ci.yml`. | **RESOLVED** ✅ |
-| W-04 | A11Y Automated Suite | Created `src/a11y.test.ts` (13 assertions testing WCAG AA semantics, landmark roles, live regions, labels, 44px touch targets, modal dialog traps, tablist arrow navigation). | **RESOLVED** ✅ |
-| W-06 | SEC-006 Production CORS | Added `CORS_ORIGIN` env configuration to `src/shared/config.ts` and `src/app.ts` so production can allow specific origins. | **RESOLVED** ✅ |
-| W-03 | Live LLM Integration | Implemented Groq AI Provider (`src/ai/groqProvider.ts`, `openai/gpt-oss-120b`). Verified end-to-end live with real API calls for draft plans, ideas, and diff proposals. | **RESOLVED** ✅ |
+| W-04 | A11Y Automated Suite | Created `src/a11y.test.ts` (14 assertions including direct axe-core run) + `scripts/audit-axe.js` auditing all 6 views (0 violations). | **RESOLVED** ✅ |
+| W-06 | SEC-006 Strict CSP & CORS | Removed `'unsafe-inline'` from CSP `script-src`. Universal `escapeHtml()` sanitization across all 10 client modules. Added configurable CORS. | **RESOLVED** ✅ |
+| W-03 | Live LLM Integration | Implemented Groq AI Provider with prompt isolation, schema validation retry, and context-aware refine summary. | **RESOLVED** ✅ |
+| W-07 | Docker Privilege Drop | Configured `docker-entrypoint.sh` with `su-exec` and `.gitattributes` LF enforcement to eliminate `EACCES` on persistent volumes. Added CI Docker build smoke gate. | **RESOLVED** ✅ |
 | Script | Dev Scripts | Fixed `dev:win` in `package.json` with `--env-file=.env` and added `check:full` gate. | **RESOLVED** ✅ |
 
 ### B. Screen Reader Auditory Verification

@@ -91,6 +91,11 @@ export function initAIActions({ getCurrentEvent, onPlanApplied }) {
     const plan = getPendingAIPlan();
     if (!event || !plan) return;
 
+    const confirmed = window.confirm(
+      '⚠️ Warning: Applying this AI plan will overwrite all existing budget categories, line items, timeline milestones, and vendor checklist entries for this event.\n\nDo you want to proceed?'
+    );
+    if (!confirmed) return;
+
     btnApplyAI.disabled = true;
     btnApplyAI.textContent = 'Saving Plan...';
 

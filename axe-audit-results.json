@@ -1,0 +1,50 @@
+[
+  {
+    "view": "Auth View (Sign-in / Register)",
+    "violations": 0,
+    "passes": 41,
+    "incomplete": 2,
+    "inapplicable": 47,
+    "details": []
+  },
+  {
+    "view": "Events Dashboard",
+    "violations": 0,
+    "passes": 42,
+    "incomplete": 2,
+    "inapplicable": 46,
+    "details": []
+  },
+  {
+    "view": "Workspace — Budget Planner",
+    "violations": 0,
+    "passes": 41,
+    "incomplete": 2,
+    "inapplicable": 47,
+    "details": []
+  },
+  {
+    "view": "Workspace — Timeline Milestones",
+    "violations": 0,
+    "passes": 41,
+    "incomplete": 2,
+    "inapplicable": 47,
+    "details": []
+  },
+  {
+    "view": "Workspace — Vendor Directory",
+    "violations": 0,
+    "passes": 41,
+    "incomplete": 2,
+    "inapplicable": 47,
+    "details": []
+  },
+  {
+    "view": "Workspace — AI Ideas & Themes",
+    "violations": 0,
+    "passes": 41,
+    "incomplete": 2,
+    "inapplicable": 47,
+    "details": []
+  }
+]

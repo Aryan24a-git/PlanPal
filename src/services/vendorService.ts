@@ -5,6 +5,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/database.js';
 import { NotFoundError } from '../shared/errors.js';
+import { VENDOR_CATEGORIES_BY_TYPE } from '../domain/vendors.js';
+import type { EventType } from '../schemas/index.js';
 
 export interface VendorRow {
   id: string;
@@ -47,6 +49,16 @@ export class VendorService {
   listVendors(eventId: string, ownerId: string) {
     this.assertOwns(eventId, ownerId);
     return (this.db.prepare('SELECT * FROM vendor_items WHERE event_id = ? ORDER BY category, name').all(eventId) as VendorRow[]).map(rowToVendor);
+  }
+
+  seedVendorsForEvent(eventId: string, eventType: string): void {
+    const categories = VENDOR_CATEGORIES_BY_TYPE[eventType as EventType] || [];
+    const insert = this.db.prepare(
+      'INSERT INTO vendor_items (id, event_id, category, name, status) VALUES (?, ?, ?, ?, ?)'
+    );
+    for (const cat of categories) {
+      insert.run(uuidv4(), eventId, cat, `TBD ${cat}`, 'to_contact');
+    }
   }
 
   createVendor(eventId: string, ownerId: string, data: { category: string; name: string; status?: string; contactName?: string; contactEmail?: string; contactPhone?: string; quoteMinor?: number; note?: string }) {

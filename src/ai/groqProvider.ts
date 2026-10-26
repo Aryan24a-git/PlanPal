@@ -33,7 +33,12 @@ interface GroqResponse {
   usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
 }
 
-const clean = (s: string) => String(s ?? '').replace(/[<>]/g, '').slice(0, 2000);
+const clean = (s: string) =>
+  String(s ?? '')
+    .replace(/[<>]/g, '')
+    .replace(/\[\/?(USER_BRIEF|INSTRUCTION)_(START|END)\]/gi, '')
+    .replace(/<\/?(user_brief|user_instruction)>/gi, '')
+    .slice(0, 2000);
 
 async function callGroq(messages: GroqMessage[], maxTokens: number): Promise<string> {
   const apiKey = config.GROQ_API_KEY;

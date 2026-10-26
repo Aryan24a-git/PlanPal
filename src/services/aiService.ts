@@ -78,8 +78,7 @@ export class AIService {
       guestEstimate: event.guest_estimate,
       totalBudget: event.total_budget,
       currency: event.currency,
-      // SEC-004: wrap brief in delimiters to isolate from prompt
-      brief: `[USER_BRIEF_START]${event.brief}[USER_BRIEF_END]`,
+      brief: event.brief,
       userId,
     };
 
@@ -134,7 +133,7 @@ export class AIService {
       ideas = await Promise.race([
         this.provider.generateIdeas({
           eventType: event.type,
-          brief: `[USER_BRIEF_START]${event.brief}[USER_BRIEF_END]`,
+          brief: event.brief,
           totalBudget: event.total_budget,
           currency: event.currency,
           userId,
@@ -152,6 +151,35 @@ export class AIService {
     return safeIdeas;
   }
 
+  // ─── Refine Diff Context Builder (Finding 6) ────────────────────────────────
+  private buildPlanSummary(eventId: string): string {
+    const cats = this.db.prepare(
+      'SELECT name, planned_minor FROM budget_categories WHERE event_id = ?'
+    ).all(eventId) as Array<{ name: string; planned_minor: number }>;
+
+    const tasks = this.db.prepare(
+      'SELECT title, due_date, offset_days FROM timeline_tasks WHERE event_id = ? ORDER BY offset_days DESC LIMIT 8'
+    ).all(eventId) as Array<{ title: string; due_date: string; offset_days: number }>;
+
+    const vendors = this.db.prepare(
+      'SELECT category, name, status, quote_minor FROM vendor_items WHERE event_id = ? LIMIT 8'
+    ).all(eventId) as Array<{ category: string; name: string; status: string; quote_minor: number | null }>;
+
+    const catStr = cats.length > 0
+      ? `Budget Categories: ` + cats.map((c) => `${c.name} (${c.planned_minor} minor units)`).join(', ')
+      : 'No budget categories configured';
+
+    const taskStr = tasks.length > 0
+      ? `Key Milestones: ` + tasks.map((t) => `${t.title} (due ${t.due_date})`).join(', ')
+      : 'No timeline tasks scheduled';
+
+    const vendorStr = vendors.length > 0
+      ? `Vendor Directory: ` + vendors.map((v) => `${v.category}: ${v.name} [status: ${v.status}${v.quote_minor ? `, quote: ${v.quote_minor}` : ''}]`).join(', ')
+      : 'No vendors listed';
+
+    return `${catStr}. ${taskStr}. ${vendorStr}.`.slice(0, 1500);
+  }
+
   // ─── Refine Diff (REQ-010) ──────────────────────────────────────────────────
   async generateRefineDiff(userId: string, eventId: string, instruction: string) {
     this.checkQuota(userId);
@@ -161,9 +189,8 @@ export class AIService {
 
     const params: RefineParams = {
       eventType: event.type,
-      currentPlanSummary: `Event ID: ${eventId}`,
-      // SEC-004: delimit the instruction
-      instruction: `[INSTRUCTION_START]${instruction.slice(0, 500)}[INSTRUCTION_END]`,
+      currentPlanSummary: this.buildPlanSummary(eventId),
+      instruction: instruction.slice(0, 500),
       userId,
     };
 

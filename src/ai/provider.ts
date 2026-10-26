@@ -84,7 +84,7 @@ export class MockAIProvider implements AIProvider {
         {
           category: 'theme',
           title: 'Garden Party Theme',
-          description: `A lush outdoor setting with wildflower arrangements and rustic wooden accents. ${p.brief.slice(0, 50)}`,
+          description: `A lush outdoor setting with wildflower arrangements and rustic wooden accents. Tailored to: ${p.brief.slice(0, 50)}`,
           estLowMinor: Math.floor(p.totalBudget * 0.05),
           estHighMinor: Math.floor(p.totalBudget * 0.10),
           estimate: true,

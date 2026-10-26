@@ -18,6 +18,14 @@ const ConfigSchema = z.object({
   AI_MAX_TOKENS: z.coerce.number().int().min(100).max(8000).default(2000),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(30000),
   CORS_ORIGIN: z.string().optional(),
+}).superRefine((c, ctx) => {
+  if (c.AI_PROVIDER === 'groq' && !c.GROQ_API_KEY) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['GROQ_API_KEY'],
+      message: 'required when AI_PROVIDER=groq',
+    });
+  }
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -35,8 +43,8 @@ function loadConfig(): AppConfig {
     const issues = result.error.issues.map((e) => `  ${e.path.join('.')}: ${e.message}`).join('\n');
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
-  if (result.data.NODE_ENV === 'production' && KNOWN_PLACEHOLDER_SECRETS.has(result.data.JWT_SECRET)) {
-    throw new Error('JWT_SECRET must not use a known default or placeholder secret in production.');
+  if ((result.data.NODE_ENV === 'production' || result.data.NODE_ENV === 'staging') && KNOWN_PLACEHOLDER_SECRETS.has(result.data.JWT_SECRET)) {
+    throw new Error('JWT_SECRET must not use a known default or placeholder secret in production or staging.');
   }
   return result.data;
 }

@@ -52,10 +52,10 @@ export function createEventRouter(
   router.get('/api/events', requireAuth, (req: AuthRequest, res, next) => {
     try {
       const { limit, offset } = validate(PaginationSchema, req.query);
-      const events = eventService.listEventsSummary(uid(req));
-      const total = (events as unknown[]).length;
-      const page = (events as unknown[]).slice(offset, offset + limit);
-      res.json({ events: page, total, limit, offset });
+      const ownerId = uid(req);
+      const events = eventService.listEventsSummary(ownerId, limit, offset);
+      const total = eventService.countEvents(ownerId);
+      res.json({ events, total, limit, offset });
     } catch (e) { next(e); }
   });
 

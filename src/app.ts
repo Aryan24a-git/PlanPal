@@ -77,8 +77,14 @@ export function createApp() {
     : (config.NODE_ENV === 'production' ? false : true);
 
   app.use(cors({ origin: corsOrigin, credentials: true }));
+
+  // ─── Static Frontend (REQ-008: served before API rate limiting) ─────────
+  const publicDir = path.join(__dirname, '..', 'public');
+  app.use(express.static(publicDir));
+
+  // ─── API Middleware & Boundaries ──────────────────────────────────────────
   app.use(express.json({ limit: '50kb' }));  // SEC-003: body size limit
-  app.use(globalRateLimit);
+  app.use('/api', globalRateLimit);
 
   // ─── Health (OBS-001 / Finding 31: touches DB) ──────────────────────────
   app.get('/api/health', (_req, res) => {
@@ -137,9 +143,7 @@ export function createApp() {
     res.status(404).json({ error: { code: 'NOT_FOUND', message: 'API endpoint not found' } });
   });
 
-  // ─── Static Frontend (REQ-008) ────────────────────────────────────────────
-  const publicDir = path.join(__dirname, '..', 'public');
-  app.use(express.static(publicDir));
+  // ─── SPA Fallback for client navigation ───────────────────────────────────
   app.use((req, res, next) => {
     if (req.method === 'GET' && !req.path.startsWith('/api')) {
       res.sendFile(path.join(publicDir, 'index.html'));

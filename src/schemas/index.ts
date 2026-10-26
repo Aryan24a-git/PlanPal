@@ -40,11 +40,19 @@ export const LoginSchema = z.object({
 });
 
 // ─── Event Schemas ────────────────────────────────────────────────────────────
+export const isValidCalendarDate = (dateStr: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return false;
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+};
+
 // Finding 22: Base schema without defaults prevents partial updates from silently resetting fields
 const BaseEventSchema = z.object({
   type: EventTypeSchema,
   name: z.string().trim().min(2, 'Name too short').max(120),
-  eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  eventDate: z.string().refine(isValidCalendarDate, 'Date must be a valid calendar date in YYYY-MM-DD format'),
   guestEstimate: z.number().int().min(1).max(50000),
   totalBudget: z.number().int().min(0).max(1_000_000_000),
   currency: CurrencySchema,

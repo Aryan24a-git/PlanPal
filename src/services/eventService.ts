@@ -14,7 +14,8 @@ import type { CreateEventInput, UpdateEventInput } from '../schemas/index.js';
 // Re-export decomposed services for seamless imports across the app
 export { BudgetService } from './budgetService.js';
 export { PlanService, IdeaService } from './planService.js';
-export { VendorService, type VendorRow, rowToVendor } from './vendorService.js';
+import { VendorService, type VendorRow, rowToVendor } from './vendorService.js';
+export { VendorService, type VendorRow, rowToVendor };
 
 // ────────────────────────────────────────────────────────────────────────────
 // ROW TYPES (internal DB representation)
@@ -79,6 +80,22 @@ export interface EventDto {
   updated_at: string;
 }
 
+export interface EventSummaryDto {
+  id: string;
+  name: string;
+  type: string;
+  eventDate: string;
+  event_date: string;
+  totalBudget: number;
+  total_budget: number;
+  currency: string;
+  updatedAt: string;
+  updated_at: string;
+  actual_spent: number;
+  tasks_total: number;
+  tasks_done: number;
+}
+
 export function toEventDto(r: EventRow): EventDto {
   return {
     id: r.id,
@@ -116,6 +133,10 @@ export class EventService {
       .prepare(`INSERT INTO events (id, owner_id, type, name, event_date, guest_estimate, total_budget, currency, brief, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(id, ownerId, input.type, input.name, input.eventDate, input.guestEstimate, input.totalBudget, input.currency, input.brief, now, now);
+
+    // REQ-006: Seed initial vendor categories per event type
+    new VendorService().seedVendorsForEvent(id, input.type);
+
     logger.info('Event created', { userId: ownerId, eventId: id });
     return this.getEventOrThrow(id, ownerId);
   }
@@ -128,7 +149,7 @@ export class EventService {
   }
 
   /** Dashboard: single-query aggregated metrics per event — PERF-001 */
-  listEventsSummary(ownerId: string, limit = 50, offset = 0): unknown[] {
+  listEventsSummary(ownerId: string, limit = 50, offset = 0): EventSummaryDto[] {
     return this.db.prepare(`
       SELECT
         e.id, e.name, e.type, e.event_date, e.total_budget, e.currency, e.updated_at,
@@ -139,7 +160,12 @@ export class EventService {
         COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id), 0) AS tasks_total,
         COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id AND status = 'completed'), 0) AS tasks_done
       FROM events e WHERE e.owner_id = ? ORDER BY e.created_at DESC LIMIT ? OFFSET ?
-    `).all(ownerId, limit, offset);
+    `).all(ownerId, limit, offset) as EventSummaryDto[];
+  }
+
+  countEvents(ownerId: string): number {
+    const row = this.db.prepare('SELECT COUNT(*) as count FROM events WHERE owner_id = ?').get(ownerId) as { count: number };
+    return row?.count ?? 0;
   }
 
   getEventOrThrow(eventId: string, ownerId: string): EventDto {
@@ -151,33 +177,34 @@ export class EventService {
   updateEvent(eventId: string, ownerId: string, input: UpdateEventInput): EventDto {
     this.getEventOrThrow(eventId, ownerId); // IDOR check
 
-    if (input.eventDate !== undefined) {
-      // REQ-005: date change → shift all non-pinned tasks
-      const taskRows = this.db.prepare('SELECT * FROM timeline_tasks WHERE event_id = ?').all(eventId) as TaskRow[];
-      const tasks = taskRows.map(rowToTask);
-      const shifted = shiftTasks(tasks, input.eventDate);
+    const tx = this.db.transaction(() => {
+      if (input.eventDate !== undefined) {
+        // REQ-005: date change → shift all non-pinned tasks
+        const taskRows = this.db.prepare('SELECT * FROM timeline_tasks WHERE event_id = ?').all(eventId) as TaskRow[];
+        const tasks = taskRows.map(rowToTask);
+        const shifted = shiftTasks(tasks, input.eventDate);
 
-      const updateTask = this.db.prepare('UPDATE timeline_tasks SET due_date = ?, offset_days = ? WHERE id = ?');
-      const tx = this.db.transaction(() => {
+        const updateTask = this.db.prepare('UPDATE timeline_tasks SET due_date = ?, offset_days = ? WHERE id = ?');
         for (const t of shifted) {
           if (t.id) updateTask.run(t.dueDate, t.offsetDays, t.id);
         }
-      });
-      tx();
-    }
+      }
 
-    const sets: string[] = ['updated_at = ?'];
-    const values: unknown[] = [new Date().toISOString()];
+      const sets: string[] = ['updated_at = ?'];
+      const values: unknown[] = [new Date().toISOString()];
 
-    if (input.name !== undefined) { sets.push('name = ?'); values.push(input.name); }
-    if (input.eventDate !== undefined) { sets.push('event_date = ?'); values.push(input.eventDate); }
-    if (input.guestEstimate !== undefined) { sets.push('guest_estimate = ?'); values.push(input.guestEstimate); }
-    if (input.totalBudget !== undefined) { sets.push('total_budget = ?'); values.push(input.totalBudget); }
-    if (input.currency !== undefined) { sets.push('currency = ?'); values.push(input.currency); }
-    if (input.brief !== undefined) { sets.push('brief = ?'); values.push(input.brief); }
+      if (input.name !== undefined) { sets.push('name = ?'); values.push(input.name); }
+      if (input.eventDate !== undefined) { sets.push('event_date = ?'); values.push(input.eventDate); }
+      if (input.guestEstimate !== undefined) { sets.push('guest_estimate = ?'); values.push(input.guestEstimate); }
+      if (input.totalBudget !== undefined) { sets.push('total_budget = ?'); values.push(input.totalBudget); }
+      if (input.currency !== undefined) { sets.push('currency = ?'); values.push(input.currency); }
+      if (input.brief !== undefined) { sets.push('brief = ?'); values.push(input.brief); }
 
-    values.push(eventId, ownerId);
-    this.db.prepare(`UPDATE events SET ${sets.join(', ')} WHERE id = ? AND owner_id = ?`).run(...values);
+      values.push(eventId, ownerId);
+      this.db.prepare(`UPDATE events SET ${sets.join(', ')} WHERE id = ? AND owner_id = ?`).run(...values);
+    });
+    tx();
+
     return this.getEventOrThrow(eventId, ownerId);
   }
 
