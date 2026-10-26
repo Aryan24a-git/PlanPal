@@ -104,3 +104,11 @@
 |---|---|---|---|
 | **W-05** | **Screen Reader Auditory Pass** | Implemented W3C APG dialog focus traps, Escape key dismiss, focus return to opener, and mutation-forced `aria-live` announcer in [`public/js/app.js`](file:///e:/projects/CHALLENGE%205/public/js/app.js). | Press **`Win + Ctrl + Enter`** to turn on built-in **Windows Narrator**. Tab through `http://localhost:4000` to hear labels, buttons, and dialogs. Press **`Win + Ctrl + Enter`** again to turn off. |
 
+## 10. Repository & Deployment Status
+- **Git Remote**: `https://github.com/Aryan24a-git/PlanPal.git`
+- **Branch**: `main` (tracked via `origin/main`)
+- **Initial Commit**: `23da7c3` (`feat: initial commit - PlanPal GenAI Event Planning Assistant`)
+- **Pushed Files**: 47 clean source, test, config, and documentation files.
+- **Excluded**: `.env`, `node_modules/`, `data/*.db*`, `dist/`, `coverage/` safely gitignored.
+
+
