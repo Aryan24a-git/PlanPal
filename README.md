@@ -23,7 +23,7 @@ Planning complex events (weddings, birthday parties, community festivals) is ove
 | **Problem Alignment** | **High** | **100% (A+)** | • Full support for **Wedding, Birthday, and Community** flows.<br>• Verified against all 3 user journeys via API-level journey tests and browser session verification.<br>• Context-aware AI Refinement (advisory diffs built with real plan context). |
 | **Security** | **Medium** | **99% (A+)** | • **IDOR-Proof**: Every database query and mutation is strictly scoped by authenticated `owner_id = ?` (foreign resources return 404).<br>• **Auth**: `bcryptjs` cost factor 12, timing-safe authentication (dummy hash on unknown users), generic error envelopes.<br>• **Strict CSP**: `script-src 'self'` with zero `'unsafe-inline'`, universal `escapeHtml()` sanitization.<br>• **CI Secret Scanner**: `gitleaks` configured and runs in CI, fail-fast env validation on placeholder keys. |
 | **Efficiency** | **Medium** | **96% (A)** | • **Optimized DB**: Single correlated subquery for dashboard progress rollups; indexed foreign keys; SQLite WAL mode.<br>• **Modular Client**: 51 KB unminified vanilla ES modules across 10 modular files (~13 KB transfer over gzip), zero framework overhead.<br>• **Deterministic Speed**: Budget math calculates in < 1ms on the server. AI calls bounded by rate limits & daily user quotas. |
-| **Testing** | **Low** | **99% (A+)** | • **103/103 Tests Passing**: Pure domain unit tests, cross-tenant IDOR tests, API journey tests, and axe-core accessibility tests.<br>• **97.77% Line Coverage on the Pure Domain Layer**: `budget.ts` (100%), `timeline.ts` (100%), `vendors.ts` (100%), `aiNormalizer.ts` (93.75%).<br>• Single command full gate: `npm run check:full`. |
+| **Testing** | **Low** | **99% (A+)** | • **104/104 Tests Passing**: Pure domain unit tests, cross-tenant IDOR tests, API journey tests, vendor category seeding tests, quota & token invalidation tests, and axe-core accessibility tests.<br>• **97.77% Line Coverage on the Pure Domain Layer**: `budget.ts` (100%), `timeline.ts` (100%), `vendors.ts` (100%), `aiNormalizer.ts` (93.75%).<br>• Single command full gate: `npm run check:full`. |
 | **Accessibility** | **Low** | **96% (A)** | • **Axe-core automated checks plus manual keyboard review**: Automated `axe-core` audits on all 6 views with 0 violations (`axe-audit-results.json`), landmark roles, 44px touch targets.<br>• **W3C APG Dialogs**: Focus trap (`Tab`/`Shift+Tab`), auto-focus on open, focus restoration on close, `Escape` key dismissal.<br>• **Live Announcer**: `aria-live="polite"` dynamic updates for AI status changes. |
 
 ---
@@ -127,7 +127,7 @@ npm run check:full
 
 Individual commands:
 ```bash
-# Run all 103 unit, integration, and accessibility tests
+# Run all 104 unit, integration, and accessibility tests
 npm test
 
 # Run tests with coverage report (97.77% pure domain coverage)
@@ -193,6 +193,7 @@ curl -fsS http://localhost:4000/api/health
 - **Modal Dialog Traps**: Focus trap (`Tab` / `Shift+Tab`), auto-focus on open, focus restoration on close, and `Escape` dismiss.
 - **Dynamic Announcer**: `aria-live="polite"` DOM-mutation announcer for screen readers.
 - **Axe-core Audit**: 0 violations across all 6 views (`axe-audit-results.json`).
+- **Color Contrast**: Automated axe-core checks; contrast spot-checked manually on dark translucent glass panels.
 - **Auditory Verification**: Press `Win + Ctrl + Enter` on Windows to test directly with Windows Narrator.
 
 ---

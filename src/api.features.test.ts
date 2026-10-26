@@ -145,3 +145,26 @@ describe('SEC-005 AI Daily Quota Enforcement', () => {
     expect(res4.body.error.code).toBe('AI_QUOTA_EXCEEDED');
   });
 });
+
+// ─── SEC-001: Deleted Account Invalidation ────────────────────────────────────
+describe('SEC-001 Deleted Account Token Invalidation', () => {
+  it('immediately rejects tokens belonging to deleted user accounts with 401', async () => {
+    const reg = await register('deleteduser@test.com', 'Soon Deleted');
+    const { token } = await login('deleteduser@test.com');
+    const userId = reg.body.user.id;
+
+    // Verify token works before deletion
+    const beforeRes = await request(app).get('/api/auth/me').set(auth(token));
+    expect(beforeRes.status).toBe(200);
+
+    // Hard-delete account
+    const { AuthService } = await import('./services/authService.js');
+    new AuthService().deleteAccount(userId);
+
+    // Verify token is immediately rejected with 401 Unauthorized
+    const afterRes = await request(app).get('/api/auth/me').set(auth(token));
+    expect(afterRes.status).toBe(401);
+    expect(afterRes.body.error.message).toContain('User account not found');
+  });
+});
+

@@ -71,6 +71,10 @@ export function requireAuth(req: AuthRequest, _res: Response, next: NextFunction
   }
   const token = header.slice(7);
   const { userId, email, name } = authService.verifyToken(token);
+  const user = authService.getUserById(userId);
+  if (!user) {
+    throw new UnauthorizedError('User account not found or deactivated');
+  }
   req.userId = userId;
   req.userEmail = email;
   req.userName = name;

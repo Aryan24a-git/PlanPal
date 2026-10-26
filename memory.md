@@ -79,7 +79,7 @@
 - Daily usage quotas tracked in database per user per day.
 
 ## 8. Verified Test Executions
-- `npx vitest run`: **103 passed** across 6 test suites (pure domain unit tests, API integration tests, vendor category seeding tests, AI daily quota enforcement tests, cross-tenant IDOR tests, automated accessibility tests).
+- `npx vitest run`: **104 passed** across 6 test suites (pure domain unit tests, API integration tests, vendor category seeding tests, AI daily quota enforcement tests, deleted-account token invalidation tests, cross-tenant IDOR tests, automated accessibility tests).
 - `npx vitest run --coverage`: **97.77%** line coverage on the pure domain layer (`budget.ts`: 100%, `timeline.ts`: 100%, `vendors.ts`: 100%, `aiNormalizer.ts`: 93.75%).
 - `node scripts/audit-axe.js`: **0 violations across all 6 views** (Auth, Dashboard, Budget, Timeline, Vendors, Ideas) executed through real client JS render functions with fixture data, recorded in `axe-audit-results.json`.
 - `node scripts/check-line-counts.js`: **100% compliant** with NFR-003 (every backend source file, client module, and test suite is ≤ 290 lines).
@@ -99,7 +99,7 @@
 | W-02 | SEC-007 CI Scanner | Added official `gitleaks/gitleaks-action@v2` secret scanner to `.github/workflows/ci.yml`. | **RESOLVED** ✅ |
 | W-04 | A11Y Automated Suite | Created `src/a11y.test.ts` (14 assertions including direct axe-core run) + `scripts/audit-axe.js` auditing all 6 views (0 violations). | **RESOLVED** ✅ |
 | W-06 | SEC-006 Strict CSP & CORS | Removed `'unsafe-inline'` from CSP `script-src`. Universal `escapeHtml()` sanitization across all 10 client modules. Added configurable CORS. | **RESOLVED** ✅ |
-| W-03 | Live LLM Integration | Implemented Groq AI Provider with prompt isolation, schema validation retry, and context-aware refine summary. | **RESOLVED** ✅ |
+| W-03 | Live LLM Integration | Implemented Groq AI Provider with prompt isolation, schema-constrained parsing, and context-aware refine summary. | **RESOLVED** ✅ |
 | W-07 | Docker Privilege Drop | Configured `docker-entrypoint.sh` with `su-exec` and `.gitattributes` LF enforcement to eliminate `EACCES` on persistent volumes. Added CI Docker build smoke gate. | **RESOLVED** ✅ |
 | Script | Dev Scripts | Fixed `dev:win` in `package.json` with `--env-file=.env` and added `check:full` gate. | **RESOLVED** ✅ |
 
