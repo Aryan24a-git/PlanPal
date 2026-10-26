@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - JWT_SECRET=production-secret-key-replace-in-env-vault-min-32-chars
+      - AI_PROVIDER=mock
+      - AI_DAILY_QUOTA_PER_USER=20
+      - DATABASE_URL=/data/planpal.db
+    volumes:
+      - planpal-data:/data
+    restart: unless-stopped
+
+volumes:
+  planpal-data:
