@@ -96,7 +96,7 @@
 | ID | Area | Resolution | Status |
 |---|---|---|---|
 | W-01 | NFR-003 File Size | Decomposed all oversized files into modular units. **All source files and test suites are strictly ≤ 289 lines**, guarded by `scripts/check-line-counts.js` in CI. | **RESOLVED** ✅ |
-| W-02 | SEC-007 CI Scanner | Added official `gitleaks/gitleaks-action@v2` secret scanner to `.github/workflows/ci.yml`. | **RESOLVED** ✅ |
+| W-02 | SEC-007 CI Scanner | Added official `gitleaks/gitleaks-action@v2` secret scanner to `.github/workflows/ci.yml`. Configured `.gitleaks.toml` with `[extend]` and path allowlist; sanitized mock test fixtures to avoid entropy/regex false positives. | **RESOLVED** ✅ |
 | W-04 | A11Y Automated Suite | Created `src/a11y.test.ts` (14 assertions including direct axe-core run) + `scripts/audit-axe.js` auditing all 6 views (0 violations). | **RESOLVED** ✅ |
 | W-06 | SEC-006 Strict CSP & CORS | Removed `'unsafe-inline'` from CSP `script-src`. Universal `escapeHtml()` sanitization across all 10 client modules. Added configurable CORS. | **RESOLVED** ✅ |
 | W-03 | Live LLM Integration | Implemented Groq AI Provider with prompt isolation, schema-constrained parsing, and context-aware refine summary. | **RESOLVED** ✅ |

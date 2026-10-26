@@ -127,17 +127,17 @@ describe('AI Plan Normalizer — V2-03, SEC-004', () => {
 describe('Logger Redaction — Finding 4 / SEC-008', () => {
   it('redacts sensitive fields by substring (accessToken, password_hash, groqApiKey, cookie, jwt)', () => {
     const sensitivePayload = {
-      accessToken: 'secret-token-xyz',
-      password_hash: '$2a$12$e0M2/1a9...',
-      groqApiKey: 'gsk_1234567890',
-      userCookie: 'session=abc',
-      jwt: 'eyJhbGciOi...',
-      authorization: 'Bearer xxx',
+      accessToken: 'sample-token-value',
+      password_hash: 'sample-hash-value',
+      groqApiKey: 'sample-api-key',
+      userCookie: 'sample-cookie-value',
+      jwt: 'sample-jwt-value',
+      authorization: 'sample-auth-header',
       briefText: 'delicate details',
       normalField: 'visible-public-info',
       nested: {
-        myApiKey: 'nested-key-val',
-        userPassword: 'plaintext-pass',
+        myApiKey: 'sample-nested-key',
+        userPassword: 'sample-password',
       },
     };
 

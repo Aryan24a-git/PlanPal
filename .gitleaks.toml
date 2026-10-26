@@ -1,0 +1,15 @@
+# Gitleaks configuration for PlanPal
+# Extends default rules with explicit allowlist for test fixtures and scripts
+
+title = "PlanPal Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for test fixtures, mock data, and scripts"
+paths = [
+  '''(?i).*\.test\.ts$''',
+  '''(?i)scripts/.*''',
+  '''\.env\.example$'''
+]
