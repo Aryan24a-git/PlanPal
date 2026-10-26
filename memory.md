@@ -79,15 +79,16 @@
 - Daily usage quotas tracked in database per user per day.
 
 ## 8. Verified Test Executions
-- `npx vitest run`: **97 passed** across 5 test suites (pure domain unit tests, API integration tests, cross-tenant IDOR tests, automated WCAG AA accessibility tests).
-- `npx vitest run --coverage`: **97.77%** lines covered across pure domain modules (`budget.ts`: 100%, `timeline.ts`: 100%, `vendors.ts`: 100%, `aiNormalizer.ts`: 93.75%).
-- `node scripts/audit-axe.js`: **0 violations across all 6 views** (Auth, Dashboard, Budget, Timeline, Vendors, Ideas) verified by `axe-core` and recorded in `axe-audit-results.json`.
-- `node scripts/check-line-counts.js`: **100% compliant** with NFR-003 (every backend source file, client module, and test suite is ≤ 289 lines).
+- `npx vitest run`: **103 passed** across 6 test suites (pure domain unit tests, API integration tests, vendor category seeding tests, AI daily quota enforcement tests, cross-tenant IDOR tests, automated accessibility tests).
+- `npx vitest run --coverage`: **97.77%** line coverage on the pure domain layer (`budget.ts`: 100%, `timeline.ts`: 100%, `vendors.ts`: 100%, `aiNormalizer.ts`: 93.75%).
+- `node scripts/audit-axe.js`: **0 violations across all 6 views** (Auth, Dashboard, Budget, Timeline, Vendors, Ideas) executed through real client JS render functions with fixture data, recorded in `axe-audit-results.json`.
+- `node scripts/check-line-counts.js`: **100% compliant** with NFR-003 (every backend source file, client module, and test suite is ≤ 290 lines).
+- `git ls-files --eol docker-entrypoint.sh`: Confirmed `i/lf w/lf` LF line endings.
 - `npx tsc --noEmit`: 0 errors.
 - `npm audit`: 0 vulnerabilities.
 - `npm run build` (tsc production): 0 errors, `dist/` emitted cleanly.
-- Server smoke test: `GET /api/health → 200 {"status":"ok","database":"connected","aiProvider":"mock"}`.
-- Refusal proof: Production boot with placeholder `JWT_SECRET` refused to start with explicit security error. Missing `GROQ_API_KEY` with `AI_PROVIDER=groq` fails fast at config startup.
+- Server smoke test: `GET /api/health → 200 {"status":"ok","database":"connected","aiProvider":"groq"}`.
+- Refusal proof: Production boot with placeholder `JWT_SECRET` refused to start with explicit security error. Missing or placeholder `GROQ_API_KEY` with `AI_PROVIDER=groq` fails fast at config startup.
 
 ## 9. Phase 5 Audit — Resolved Warnings & Quality Gates
 

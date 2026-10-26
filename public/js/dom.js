@@ -3,8 +3,12 @@
  * A11Y-001, A11Y-002, SEC-004.
  */
 
-const announcer = document.getElementById('live-announcer');
-const toastContainer = document.getElementById('toast-container');
+function getAnnouncer() {
+  return typeof document !== 'undefined' ? document.getElementById('live-announcer') : null;
+}
+function getToastContainer() {
+  return typeof document !== 'undefined' ? document.getElementById('toast-container') : null;
+}
 let lastFocusedElement = null;
 
 /**
@@ -24,6 +28,7 @@ export function escapeHtml(str) {
  * A11Y-002: Dynamic screen reader announcer using aria-live
  */
 export function announce(message, priority = 'polite') {
+  const announcer = getAnnouncer();
   if (!announcer) return;
   announcer.setAttribute('aria-live', priority);
   announcer.textContent = '';
@@ -36,6 +41,7 @@ export function announce(message, priority = 'polite') {
  * Toast notifications with auto-dismiss and accessibility announcement
  */
 export function showToast(message, type = 'info') {
+  const toastContainer = getToastContainer();
   if (!toastContainer) return;
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;

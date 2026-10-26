@@ -6,6 +6,7 @@ import {
   computeDueDate, shiftTasks, calculateProgress, detectOverdueTasks, assignPhaseLabel, groupByPhase
 } from './timeline.js';
 import { summarizeVendors, VENDOR_CATEGORIES_BY_TYPE } from './vendors.js';
+import { isValidCalendarDate } from '../schemas/index.js';
 
 // ─── Budget Domain ────────────────────────────────────────────────────────────
 describe('Budget Domain — REQ-004', () => {
@@ -185,3 +186,22 @@ describe('Vendor Domain — REQ-006', () => {
     expect(s.totalQuotedMinor).toBe(1200);
   });
 });
+
+// ─── Calendar Date Validation (SEC-003) ───────────────────────────────────────
+describe('Calendar Date Validation — SEC-003', () => {
+  it('validates authentic calendar dates and handles leap years correctly', () => {
+    expect(isValidCalendarDate('2026-12-25')).toBe(true);
+    expect(isValidCalendarDate('2024-02-29')).toBe(true); // 2024 leap year
+    expect(isValidCalendarDate('2000-02-29')).toBe(true); // century leap year
+  });
+
+  it('rejects nonexistent calendar dates like February 31st or April 31st', () => {
+    expect(isValidCalendarDate('2026-02-31')).toBe(false);
+    expect(isValidCalendarDate('2026-02-29')).toBe(false); // 2026 non-leap year
+    expect(isValidCalendarDate('2026-04-31')).toBe(false); // April has 30 days
+    expect(isValidCalendarDate('2026-06-31')).toBe(false); // June has 30 days
+    expect(isValidCalendarDate('2026-13-01')).toBe(false); // Month 13
+    expect(isValidCalendarDate('not-a-date')).toBe(false);
+  });
+});
+

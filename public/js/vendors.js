@@ -29,7 +29,7 @@ export function renderVendors(vendors, currency, eventId, onRefresh) {
     <div class="vendor-card">
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div class="vendor-cat">${escapeHtml(v.category)}</div>
-        <button class="btn btn-ghost btn-sm btn-delete-vendor" data-id="${escapeHtml(v.id)}" title="Delete Vendor">&times;</button>
+        <button class="btn btn-ghost btn-sm btn-delete-vendor" data-id="${escapeHtml(v.id)}" title="Delete Vendor" aria-label="Delete vendor ${escapeHtml(v.name)}">&times;</button>
       </div>
       <div class="vendor-title">${escapeHtml(v.name)}</div>
       <p class="vendor-notes">${escapeHtml(v.note || 'No notes specified')}</p>
@@ -42,8 +42,8 @@ export function renderVendors(vendors, currency, eventId, onRefresh) {
       </div>
 
       <div style="margin-top:0.5rem;">
-        <label style="font-size:0.75rem; color:var(--text-dim); display:block; margin-bottom:0.2rem;">Status</label>
-        <select class="form-control select-vendor-status" data-id="${escapeHtml(v.id)}" style="padding:0.35rem 0.6rem; font-size:0.85rem;">
+        <label for="vendor-status-${escapeHtml(v.id)}" style="font-size:0.75rem; color:var(--text-dim); display:block; margin-bottom:0.2rem;">Status</label>
+        <select id="vendor-status-${escapeHtml(v.id)}" class="form-control select-vendor-status" data-id="${escapeHtml(v.id)}" aria-label="Status for ${escapeHtml(v.name)}" style="padding:0.35rem 0.6rem; font-size:0.85rem;">
           <option value="to_contact" ${v.status === 'to_contact' ? 'selected' : ''}>To Contact</option>
           <option value="contacted" ${v.status === 'contacted' ? 'selected' : ''}>Contacted</option>
           <option value="quoted" ${v.status === 'quoted' ? 'selected' : ''}>Quoted</option>

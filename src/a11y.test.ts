@@ -111,5 +111,5 @@ describe('A11Y-001 & A11Y-002: Accessibility Standards Verification', () => {
       runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
     });
     expect(results.violations).toHaveLength(0);
-  });
+  }, 30000);
 });

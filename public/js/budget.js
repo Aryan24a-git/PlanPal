@@ -43,8 +43,8 @@ export function renderBudgetCategories(categories, currency, eventId, onRefresh)
           <span class="category-amounts">Allocated: ${formatCurrency(cat.plannedMinor, currency)}</span>
         </div>
         <div class="category-actions">
-          <button class="btn btn-secondary btn-sm btn-add-item-to-cat" data-cat-id="${escapeHtml(cat.id)}">+ Item</button>
-          <button class="btn btn-ghost btn-sm btn-delete-cat" data-cat-id="${escapeHtml(cat.id)}" title="Delete Category">&times;</button>
+          <button class="btn btn-secondary btn-sm btn-add-item-to-cat" data-cat-id="${escapeHtml(cat.id)}" aria-label="Add item to ${escapeHtml(cat.name)}">+ Item</button>
+          <button class="btn btn-ghost btn-sm btn-delete-cat" data-cat-id="${escapeHtml(cat.id)}" title="Delete Category" aria-label="Delete category ${escapeHtml(cat.name)}">&times;</button>
         </div>
       </div>
       ${(cat.items || [])
@@ -58,8 +58,8 @@ export function renderBudgetCategories(categories, currency, eventId, onRefresh)
           <div class="line-item-actions">
             <span>Planned: ${formatCurrency(item.plannedMinor, currency)}</span>
             <span style="color:var(--text-main); font-weight:600;">Actual: ${formatCurrency(item.actualMinor, currency)}</span>
-            <button class="btn btn-ghost btn-sm btn-edit-item-actual" data-cat-id="${escapeHtml(cat.id)}" data-item-id="${escapeHtml(item.id)}" data-label="${escapeHtml(item.label)}" data-planned="${item.plannedMinor}" data-actual="${item.actualMinor}" title="Update Actual Amount">✏️</button>
-            <button class="btn btn-ghost btn-sm btn-delete-item" data-cat-id="${escapeHtml(cat.id)}" data-item-id="${escapeHtml(item.id)}" title="Delete Line Item">&times;</button>
+            <button class="btn btn-ghost btn-sm btn-edit-item-actual" data-cat-id="${escapeHtml(cat.id)}" data-item-id="${escapeHtml(item.id)}" data-label="${escapeHtml(item.label)}" data-planned="${item.plannedMinor}" data-actual="${item.actualMinor}" title="Update Actual Amount" aria-label="Update actual cost for ${escapeHtml(item.label)}">✏️</button>
+            <button class="btn btn-ghost btn-sm btn-delete-item" data-cat-id="${escapeHtml(cat.id)}" data-item-id="${escapeHtml(item.id)}" title="Delete Line Item" aria-label="Delete line item ${escapeHtml(item.label)}">&times;</button>
           </div>
         </div>
       `

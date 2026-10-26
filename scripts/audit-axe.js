@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
  * Automated axe-core Accessibility Audit Script.
- * Audits all 6 application views with rendered DOM state and data:
+ * Audits all 6 application views directly by invoking the REAL render functions
+ * from public/js/ with realistic fixture data:
  * 1. Auth View (Sign in / Registration)
- * 2. Events Dashboard (User events list with metrics)
- * 3. Workspace — Budget Planner
- * 4. Workspace — Timeline Milestones
- * 5. Workspace — Vendor Directory
- * 6. Workspace — AI Ideas & Themes
+ * 2. Events Dashboard (renderEventsList)
+ * 3. Workspace — Budget Planner (renderBudgetCategories & renderBudgetMetrics)
+ * 4. Workspace — Timeline Milestones (renderTimeline)
+ * 5. Workspace — Vendor Directory (renderVendors)
+ * 6. Workspace — AI Ideas & Themes (renderIdeas & showAIBanner)
  */
 import fs from 'fs';
 import path from 'path';
@@ -20,13 +21,139 @@ const __dirname = path.dirname(__filename);
 const htmlPath = path.join(__dirname, '..', 'public', 'index.html');
 const baseHtml = fs.readFileSync(htmlPath, 'utf8');
 
+// Fixture Data
+const mockEvents = [
+  {
+    id: 'evt-1',
+    name: 'Alice & Bob Wedding',
+    type: 'wedding',
+    event_date: '2027-06-15',
+    brief: 'Elegant garden wedding celebration in June.',
+    total_budget: 1000000,
+    currency: 'USD',
+    actual_spent: 350000,
+    tasks_done: 4,
+    tasks_total: 8,
+  },
+];
+
+const mockCategories = [
+  {
+    id: 'cat-1',
+    name: 'Venue & Reception',
+    plannedMinor: 500000,
+    items: [
+      { id: 'item-1', label: 'Main Hall Deposit', plannedMinor: 300000, actualMinor: 300000, note: 'Deposit paid' },
+      { id: 'item-2', label: 'Sound & Lighting Package', plannedMinor: 200000, actualMinor: 180000 },
+    ],
+  },
+];
+
+const mockBudget = {
+  totalBudget: 1000000,
+  totalAllocated: 500000,
+  unallocated: 500000,
+  totalPlanned: 500000,
+  totalActual: 480000,
+  remainingActual: 520000,
+  isOverBudget: false,
+};
+
+const mockTasks = [
+  {
+    id: 'task-1',
+    title: 'Book catering and final menu tasting',
+    dueDate: '2027-03-15',
+    offsetDays: 90,
+    phase: '3+ months out',
+    priority: 'high',
+    status: 'todo',
+    pinned: false,
+  },
+  {
+    id: 'task-2',
+    title: 'Send wedding invitations',
+    dueDate: '2027-04-15',
+    offsetDays: 60,
+    phase: '1–3 months out',
+    priority: 'medium',
+    status: 'completed',
+    pinned: true,
+  },
+];
+
+const mockVendors = [
+  {
+    id: 'ven-1',
+    category: 'Catering & Bar',
+    name: 'Gourmet Catering Co.',
+    status: 'quoted',
+    quote_minor: 320000,
+    contact_name: 'Chef John',
+    contact_phone: '555-0199',
+    contact_email: 'john@gourmet.com',
+    note: 'Menu tasting scheduled for next month',
+  },
+  {
+    id: 'ven-2',
+    category: 'Photography',
+    name: 'Snap Magic Studio',
+    status: 'booked',
+    quote_minor: 250000,
+    contact_name: 'Sarah Lens',
+    contact_phone: '555-0144',
+    contact_email: 'sarah@snapmagic.com',
+    note: 'Contract signed and deposit transferred',
+  },
+];
+
+const mockIdeas = [
+  {
+    id: 'idea-1',
+    category: 'theme',
+    title: 'Garden Elegance Theme',
+    description: 'Wildflower centerpieces with warm fairy lights and linen table runners.',
+    est_low_minor: 50000,
+    est_high_minor: 120000,
+    state: 'saved',
+  },
+  {
+    id: 'idea-2',
+    category: 'activity',
+    title: 'Polaroid Guestbook Station',
+    description: 'Interactive instant photo guestbook with metallic markers and adhesive corners.',
+    est_low_minor: 15000,
+    est_high_minor: 30000,
+    state: 'active',
+  },
+];
+
+const mockAiPlan = {
+  budgetCategories: [
+    { name: 'Venue & Reception', allocatedAmount: 500000, items: [{ name: 'Hall', plannedAmount: 500000 }] },
+  ],
+  timelineTasks: [
+    { title: 'Reserve hall', daysBeforeEvent: 90, priority: 'high' },
+  ],
+  vendorChecklist: [
+    { category: 'Venue & Reception', name: 'Grand Ballroom' },
+  ],
+  ideas: [
+    { category: 'theme', title: 'Summer Blossom', description: 'Pastel flowers', estimate: true },
+  ],
+};
+
 async function auditView(viewName, setupDom) {
   const dom = new JSDOM(baseHtml, {
     runScripts: 'outside-only',
     url: 'http://localhost:4000/',
   });
 
-  setupDom(dom.window.document);
+  // Expose global window and document for client template modules
+  global.window = dom.window;
+  global.document = dom.window.document;
+
+  await setupDom(dom.window.document);
 
   const results = await axe.run(dom.window.document.documentElement, {
     runOnly: {
@@ -51,49 +178,17 @@ async function auditView(viewName, setupDom) {
 }
 
 async function runAudits() {
-  console.log('Running automated axe-core accessibility audit across 6 views...\n');
+  console.log('Running automated axe-core accessibility audit using REAL render functions...\n');
+
+  // Dynamically import real client renderers
+  const { renderEventsList } = await import('../public/js/events.js');
+  const { renderBudgetCategories, renderBudgetMetrics } = await import('../public/js/budget.js');
+  const { renderTimeline } = await import('../public/js/timeline.js');
+  const { renderVendors } = await import('../public/js/vendors.js');
+  const { renderIdeas } = await import('../public/js/ideas.js');
+  const { showAIBanner } = await import('../public/js/ai.js');
 
   const report = [];
-
-  // 1. Auth View
-  report.push(await auditView('Auth View (Sign-in / Register)', (doc) => {
-    doc.getElementById('auth-section')?.classList.remove('hidden');
-    doc.getElementById('dashboard-section')?.classList.add('hidden');
-    doc.getElementById('event-workspace-section')?.classList.add('hidden');
-  }));
-
-  // 2. Events Dashboard
-  report.push(await auditView('Events Dashboard', (doc) => {
-    doc.getElementById('auth-section')?.classList.add('hidden');
-    const dash = doc.getElementById('dashboard-section');
-    dash?.classList.remove('hidden');
-    doc.getElementById('event-workspace-section')?.classList.add('hidden');
-    const grid = doc.getElementById('events-grid');
-    if (grid) {
-      grid.innerHTML = `
-        <div class="event-card glass-panel" data-id="evt-1" tabindex="0" role="button" aria-label="Open event Alice & Bob Wedding">
-          <div>
-            <div class="card-top">
-              <span class="type-pill">WEDDING</span>
-              <span class="date-pill">2027-06-15</span>
-            </div>
-            <h2 class="event-name">Alice & Bob Wedding</h2>
-            <p class="card-brief">Elegant garden wedding celebration.</p>
-          </div>
-          <div class="card-metrics">
-            <div>
-              <div class="metric-mini-label">Budget Limit</div>
-              <div class="metric-mini-val">$10,000.00</div>
-            </div>
-            <div>
-              <div class="metric-mini-label">Spent / Progress</div>
-              <div class="metric-mini-val">$3,500.00 &bull; 4/8 tasks</div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-  }));
 
   // Helper to activate workspace tab
   function setupWorkspace(doc, activeTabId) {
@@ -116,98 +211,46 @@ async function runAudits() {
     });
   }
 
-  // 3. Workspace — Budget
+  // 1. Auth View
+  report.push(await auditView('Auth View (Sign-in / Register)', (doc) => {
+    doc.getElementById('auth-section')?.classList.remove('hidden');
+    doc.getElementById('dashboard-section')?.classList.add('hidden');
+    doc.getElementById('event-workspace-section')?.classList.add('hidden');
+  }));
+
+  // 2. Events Dashboard (Real renderEventsList)
+  report.push(await auditView('Events Dashboard', (doc) => {
+    doc.getElementById('auth-section')?.classList.add('hidden');
+    doc.getElementById('dashboard-section')?.classList.remove('hidden');
+    doc.getElementById('event-workspace-section')?.classList.add('hidden');
+    const grid = doc.getElementById('events-grid');
+    renderEventsList(grid, mockEvents, () => {});
+  }));
+
+  // 3. Workspace — Budget Planner (Real renderBudgetCategories & renderBudgetMetrics)
   report.push(await auditView('Workspace — Budget Planner', (doc) => {
     setupWorkspace(doc, 'tab-content-budget');
-    const catList = doc.getElementById('categories-list');
-    if (catList) {
-      catList.innerHTML = `
-        <div class="category-block">
-          <div class="category-header">
-            <div>
-              <span class="category-name">Venue & Reception</span>
-              <span class="category-amounts">Allocated: $5,000.00</span>
-            </div>
-            <div class="category-actions">
-              <button class="btn btn-secondary btn-sm" aria-label="Add item to Venue">+ Item</button>
-            </div>
-          </div>
-          <div class="line-item-row">
-            <div><strong>Main Hall Deposit</strong></div>
-            <div class="line-item-actions">
-              <span>Planned: $3,000.00</span>
-              <span>Actual: $3,000.00</span>
-            </div>
-          </div>
-        </div>
-      `;
-    }
+    renderBudgetMetrics(mockBudget, 'USD');
+    renderBudgetCategories(mockCategories, 'USD', 'evt-1', () => {});
   }));
 
-  // 4. Workspace — Timeline
+  // 4. Workspace — Timeline Milestones (Real renderTimeline)
   report.push(await auditView('Workspace — Timeline Milestones', (doc) => {
     setupWorkspace(doc, 'tab-content-timeline');
-    const timeline = doc.getElementById('timeline-list');
-    if (timeline) {
-      timeline.innerHTML = `
-        <div class="timeline-item">
-          <div class="task-date-box">
-            <strong>2027-03-15</strong>
-            <span>90d before</span>
-          </div>
-          <div class="task-content">
-            <div class="task-title">Book catering and final menu tasting</div>
-            <span class="subtext">Phase: 3+ months out &bull; Priority: HIGH</span>
-          </div>
-          <div class="task-controls">
-            <button class="btn btn-ghost btn-sm" aria-label="Mark task done">○ Mark Done</button>
-          </div>
-        </div>
-      `;
-    }
+    renderTimeline(mockTasks, 'evt-1', () => {});
   }));
 
-  // 5. Workspace — Vendors
+  // 5. Workspace — Vendor Directory (Real renderVendors)
   report.push(await auditView('Workspace — Vendor Directory', (doc) => {
     setupWorkspace(doc, 'tab-content-vendors');
-    const grid = doc.getElementById('vendors-grid');
-    if (grid) {
-      grid.innerHTML = `
-        <div class="vendor-card">
-          <div class="vendor-cat">Catering & Bar</div>
-          <div class="vendor-title">Gourmet Catering Co.</div>
-          <p class="vendor-notes">Tasting scheduled for next month.</p>
-          <div>Quote: $3,200.00</div>
-          <div>
-            <label for="vendor-select-sample" class="sr-only">Status for Gourmet Catering Co.</label>
-            <select id="vendor-select-sample" class="form-control">
-              <option value="quoted" selected>Quoted</option>
-              <option value="booked">Booked</option>
-            </select>
-          </div>
-        </div>
-      `;
-    }
+    renderVendors(mockVendors, 'USD', 'evt-1', () => {});
   }));
 
-  // 6. Workspace — Ideas
+  // 6. Workspace — AI Ideas & Themes (Real renderIdeas & showAIBanner)
   report.push(await auditView('Workspace — AI Ideas & Themes', (doc) => {
     setupWorkspace(doc, 'tab-content-ideas');
-    const grid = doc.getElementById('ideas-grid');
-    if (grid) {
-      grid.innerHTML = `
-        <div class="idea-card">
-          <div class="idea-cat-tag">theme</div>
-          <div class="idea-title">Garden Elegance Theme</div>
-          <p class="idea-desc">Wildflower centerpieces with string lights.</p>
-          <div class="idea-estimate-pill">Est: $500.00 – $1,200.00 (Advisory)</div>
-          <div class="idea-actions">
-            <button class="btn btn-primary btn-sm" aria-label="Save Garden Elegance idea">⭐ Save</button>
-            <button class="btn btn-ghost btn-sm" aria-label="Dismiss Garden Elegance idea">Dismiss</button>
-          </div>
-        </div>
-      `;
-    }
+    renderIdeas(mockIdeas, 'USD', 'evt-1', () => {});
+    showAIBanner(mockAiPlan, [], 'AI Proposal Ready', 'USD');
   }));
 
   // Print results table

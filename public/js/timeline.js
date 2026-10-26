@@ -31,13 +31,13 @@ export function renderTimeline(tasks, eventId, onRefresh) {
         <span class="subtext">Phase: ${escapeHtml(t.phase || 'General')} &bull; Priority: ${escapeHtml(t.priority?.toUpperCase())}</span>
       </div>
       <div class="task-controls">
-        <button class="btn btn-ghost btn-sm btn-toggle-task" data-id="${escapeHtml(t.id)}" data-status="${escapeHtml(t.status)}">
+        <button class="btn btn-ghost btn-sm btn-toggle-task" data-id="${escapeHtml(t.id)}" data-status="${escapeHtml(t.status)}" aria-label="${t.status === 'completed' ? 'Mark task incomplete: ' + escapeHtml(t.title) : 'Mark task complete: ' + escapeHtml(t.title)}">
           ${t.status === 'completed' ? '✓ Done' : '○ Mark Done'}
         </button>
-        <button class="btn btn-ghost btn-sm btn-toggle-pin" data-id="${escapeHtml(t.id)}" data-pinned="${t.pinned}" title="${t.pinned ? 'Pinned (Won\'t shift)' : 'Unpinned (Shifts with event date)'}">
+        <button class="btn btn-ghost btn-sm btn-toggle-pin" data-id="${escapeHtml(t.id)}" data-pinned="${t.pinned}" title="${t.pinned ? 'Pinned (Won\'t shift)' : 'Unpinned (Shifts with event date)'}" aria-label="${t.pinned ? 'Unpin task: ' + escapeHtml(t.title) : 'Pin task: ' + escapeHtml(t.title)}">
           ${t.pinned ? '📌' : '📍'}
         </button>
-        <button class="btn btn-ghost btn-sm btn-delete-task" data-id="${escapeHtml(t.id)}" title="Delete Task">&times;</button>
+        <button class="btn btn-ghost btn-sm btn-delete-task" data-id="${escapeHtml(t.id)}" title="Delete Task" aria-label="Delete task: ${escapeHtml(t.title)}">&times;</button>
       </div>
     </div>
   `

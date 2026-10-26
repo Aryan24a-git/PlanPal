@@ -27,19 +27,19 @@ export function showAIBanner(plan, warnings = [], customHeading = null, currency
   aiPlanPreview.innerHTML = `
     <div class="ai-preview-grid">
       <div class="ai-preview-col">
-        <h4>💰 Budget Allocations</h4>
+        <h3 style="font-size:0.95rem; font-weight:600; margin-bottom:0.5rem;">💰 Budget Allocations</h3>
         <ul>
           ${plan.budgetCategories.map((c) => `<li><strong>${escapeHtml(c.name)}</strong>: ${formatCurrency(c.allocatedAmount, currency)} (${c.items.length} items)</li>`).join('')}
         </ul>
       </div>
       <div class="ai-preview-col">
-        <h4>📅 Key Milestones</h4>
+        <h3 style="font-size:0.95rem; font-weight:600; margin-bottom:0.5rem;">📅 Key Milestones</h3>
         <ul>
           ${plan.timelineTasks.slice(0, 5).map((t) => `<li>${escapeHtml(t.title)} (${escapeHtml(t.daysBeforeEvent)}d before)</li>`).join('')}
         </ul>
       </div>
       <div class="ai-preview-col">
-        <h4>🤝 Vendor Checklist</h4>
+        <h3 style="font-size:0.95rem; font-weight:600; margin-bottom:0.5rem;">🤝 Vendor Checklist</h3>
         <ul>
           ${plan.vendorChecklist.slice(0, 5).map((v) => `<li>${escapeHtml(v.category)}: ${escapeHtml(v.name)}</li>`).join('')}
         </ul>

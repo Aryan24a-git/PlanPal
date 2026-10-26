@@ -14,7 +14,7 @@ export function renderIdeas(ideas, currency, eventId, onRefresh) {
 
   ideasGrid.innerHTML = ideas
     .map((idea) => {
-      const hasRange = idea.est_low_minor !== null && idea.est_high_minor !== null;
+      const hasRange = typeof idea.est_low_minor === 'number' && typeof idea.est_high_minor === 'number' && !isNaN(idea.est_low_minor) && !isNaN(idea.est_high_minor);
       return `
       <div class="idea-card ${idea.state === 'dismissed' ? 'hidden' : ''}">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -32,10 +32,10 @@ export function renderIdeas(ideas, currency, eventId, onRefresh) {
 
         <div class="idea-actions">
           ${idea.state !== 'saved' ? `
-            <button class="btn btn-primary btn-sm btn-save-idea" data-id="${escapeHtml(idea.id)}">⭐ Save</button>
+            <button class="btn btn-primary btn-sm btn-save-idea" data-id="${escapeHtml(idea.id)}" aria-label="Save idea: ${escapeHtml(idea.title)}">⭐ Save</button>
           ` : '<span class="date-pill">Saved ⭐</span>'}
           ${idea.state !== 'dismissed' ? `
-            <button class="btn btn-ghost btn-sm btn-dismiss-idea" data-id="${escapeHtml(idea.id)}">Dismiss</button>
+            <button class="btn btn-ghost btn-sm btn-dismiss-idea" data-id="${escapeHtml(idea.id)}" aria-label="Dismiss idea: ${escapeHtml(idea.title)}">Dismiss</button>
           ` : ''}
         </div>
       </div>

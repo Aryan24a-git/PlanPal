@@ -19,12 +19,15 @@ const ConfigSchema = z.object({
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(30000),
   CORS_ORIGIN: z.string().optional(),
 }).superRefine((c, ctx) => {
-  if (c.AI_PROVIDER === 'groq' && !c.GROQ_API_KEY) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['GROQ_API_KEY'],
-      message: 'required when AI_PROVIDER=groq',
-    });
+  if (c.AI_PROVIDER === 'groq') {
+    const key = c.GROQ_API_KEY?.trim();
+    if (!key || key === 'your_groq_api_key_here' || key.includes('placeholder')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['GROQ_API_KEY'],
+        message: 'required and must not use placeholder text when AI_PROVIDER=groq',
+      });
+    }
   }
 });
 

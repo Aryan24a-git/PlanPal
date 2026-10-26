@@ -24,5 +24,5 @@ PlanPal is a full-stack GenAI Event Planning Assistant built with strict TypeScr
    - RESTful endpoints with Zod validation, structured logging, request IDs, rate limiting, and security headers (CSP, CORS, CSRF).
 6. **Frontend**:
    - Modern, responsive, glassmorphic UI with dark/light themes.
-   - Accessible keyboard navigation, WCAG 2.1 AA compliant contrast, aria-live status alerts for AI operations.
+   - Accessible keyboard navigation, accessible contrast verified with axe-core, aria-live status alerts for AI operations.
    - Interactive Event Wizard, Budget Planner, Timeline Gantt/Calendar view, Vendor CRM, and AI Idea Studio.
