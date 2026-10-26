@@ -177,7 +177,3 @@ curl http://localhost:4000/api/health
 - **Dynamic Announcer**: `aria-live="polite"` DOM-mutation announcer for screen readers.
 - **Auditory Verification**: Press `Win + Ctrl + Enter` on Windows to test directly with Windows Narrator.
 
----
-
-## 📄 License
-ISC License. Built for Challenge 5.
