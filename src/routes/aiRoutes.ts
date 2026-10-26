@@ -11,7 +11,9 @@ import {
   UpdateIdeaStateSchema,
   AIRefineRequestSchema,
   AIDraftPlanSchema,
+  type EventType,
 } from '../schemas/index.js';
+import { normalizeAiPlan } from '../domain/aiNormalizer.js';
 import { ValidationError } from '../shared/errors.js';
 import type { ZodSchema } from 'zod';
 
@@ -93,7 +95,17 @@ export function createAIRouter(
         res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid plan structure' } });
         return;
       }
-      planService.applyDraftPlan(eventId, uid(req), parsed.data);
+
+      // Finding 25: Re-normalize plan server-side against event budget & date before applying
+      const event = eventService.getEventOrThrow(eventId, uid(req));
+      const { plan: normalizedPlan } = normalizeAiPlan(
+        parsed.data,
+        event.total_budget,
+        event.event_date,
+        event.type as EventType,
+      );
+
+      planService.applyDraftPlan(eventId, uid(req), normalizedPlan);
       res.json({ applied: true });
     } catch (e) { next(e); }
   });

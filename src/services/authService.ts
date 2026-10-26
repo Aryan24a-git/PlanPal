@@ -27,16 +27,18 @@ interface UserRow {
   created_at: string;
 }
 
-// SEC-001: cost factor 12 minimum for bcrypt
 const BCRYPT_ROUNDS = 12;
+
+// SEC-001: Precomputed valid bcrypt hash for timing-safe dummy comparison
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password-timing-safe', BCRYPT_ROUNDS);
 
 export class AuthService {
   private get db() { return getDatabase(); }
 
   async register(email: string, password: string, name: string): Promise<{ user: UserRecord; token: string }> {
-    const existing = this.db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = this.db.prepare('SELECT id FROM users WHERE email = ?').get(normalizedEmail);
     if (existing) {
-      // SEC-001: Generic — don't reveal that the email exists
       throw new ConflictError('An account with this email already exists');
     }
 
@@ -44,26 +46,34 @@ export class AuthService {
     const id = uuidv4();
     const now = new Date().toISOString();
 
-    this.db
-      .prepare('INSERT INTO users (id, email, password_hash, name, created_at) VALUES (?, ?, ?, ?, ?)')
-      .run(id, email.toLowerCase(), passwordHash, name.trim(), now);
+    try {
+      this.db
+        .prepare('INSERT INTO users (id, email, password_hash, name, created_at) VALUES (?, ?, ?, ?, ?)')
+        .run(id, normalizedEmail, passwordHash, name.trim(), now);
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code === 'SQLITE_CONSTRAINT_UNIQUE' || (err as { message?: string }).message?.includes('UNIQUE')) {
+        throw new ConflictError('An account with this email already exists');
+      }
+      throw err;
+    }
 
     logger.info('User registered', { userId: id });
-    const token = this.signToken(id, email.toLowerCase(), name);
-    return { user: { id, email: email.toLowerCase(), name, created_at: now }, token };
+    const token = this.signToken(id, normalizedEmail, name);
+    return { user: { id, email: normalizedEmail, name, created_at: now }, token };
   }
 
   async login(email: string, password: string): Promise<{ user: UserRecord; token: string }> {
+    const normalizedEmail = email.trim().toLowerCase();
     const row = this.db
       .prepare('SELECT * FROM users WHERE email = ?')
-      .get(email.toLowerCase()) as UserRow | undefined;
+      .get(normalizedEmail) as UserRow | undefined;
 
-    // SEC-001: Always run hash compare — prevents timing side-channel even on missing user
-    const hashToCompare = row?.password_hash ?? '$2b$12$invalidhashfortimingnorealpassword.1234567890';
+    // SEC-001: Always run valid bcrypt compare to eliminate timing oracle on user enumeration
+    const hashToCompare = row?.password_hash ?? DUMMY_HASH;
     const valid = await bcrypt.compare(password, hashToCompare);
 
     if (!row || !valid) {
-      // SEC-001: Generic message — never reveal which of email/password was wrong
+      // SEC-001: Generic message — never reveal whether email or password was incorrect
       throw new UnauthorizedError('Invalid email or password');
     }
 

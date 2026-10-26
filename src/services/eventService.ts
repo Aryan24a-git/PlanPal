@@ -14,6 +14,7 @@ import type { CreateEventInput, UpdateEventInput } from '../schemas/index.js';
 // Re-export decomposed services for seamless imports across the app
 export { BudgetService } from './budgetService.js';
 export { PlanService, IdeaService } from './planService.js';
+export { VendorService, type VendorRow, rowToVendor } from './vendorService.js';
 
 // ────────────────────────────────────────────────────────────────────────────
 // ROW TYPES (internal DB representation)
@@ -44,19 +45,6 @@ interface TaskRow {
   phase: string | null;
 }
 
-interface VendorRow {
-  id: string;
-  event_id: string;
-  category: string;
-  name: string;
-  status: string;
-  contact_name: string | null;
-  contact_email: string | null;
-  contact_phone: string | null;
-  quote_minor: number | null;
-  note: string | null;
-}
-
 function rowToTask(r: TaskRow) {
   return {
     id: r.id,
@@ -70,18 +58,46 @@ function rowToTask(r: TaskRow) {
   };
 }
 
-function rowToVendor(r: VendorRow) {
+export interface EventDto {
+  id: string;
+  ownerId: string;
+  type: string;
+  name: string;
+  eventDate: string;
+  guestEstimate: number;
+  totalBudget: number;
+  currency: string;
+  brief: string;
+  createdAt: string;
+  updatedAt: string;
+  // Also keep snake_case for backward compatibility
+  owner_id: string;
+  event_date: string;
+  guest_estimate: number;
+  total_budget: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export function toEventDto(r: EventRow): EventDto {
   return {
     id: r.id,
-    event_id: r.event_id,
-    category: r.category,
+    ownerId: r.owner_id,
+    type: r.type,
     name: r.name,
-    status: r.status,
-    contact_name: r.contact_name ?? undefined,
-    contact_email: r.contact_email ?? undefined,
-    contact_phone: r.contact_phone ?? undefined,
-    quote_minor: r.quote_minor ?? undefined,
-    note: r.note ?? undefined,
+    eventDate: r.event_date,
+    guestEstimate: r.guest_estimate,
+    totalBudget: r.total_budget,
+    currency: r.currency,
+    brief: r.brief,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    owner_id: r.owner_id,
+    event_date: r.event_date,
+    guest_estimate: r.guest_estimate,
+    total_budget: r.total_budget,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
   };
 }
 
@@ -104,31 +120,35 @@ export class EventService {
     return this.getEventOrThrow(id, ownerId);
   }
 
-  listEvents(ownerId: string): EventRow[] {
-    return this.db.prepare('SELECT * FROM events WHERE owner_id = ? ORDER BY created_at DESC').all(ownerId) as EventRow[];
+  listEvents(ownerId: string, limit = 50, offset = 0): EventDto[] {
+    const rows = this.db
+      .prepare('SELECT * FROM events WHERE owner_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?')
+      .all(ownerId, limit, offset) as EventRow[];
+    return rows.map(toEventDto);
   }
 
   /** Dashboard: single-query aggregated metrics per event — PERF-001 */
-  listEventsSummary(ownerId: string): unknown[] {
+  listEventsSummary(ownerId: string, limit = 50, offset = 0): unknown[] {
     return this.db.prepare(`
       SELECT
         e.id, e.name, e.type, e.event_date, e.total_budget, e.currency, e.updated_at,
+        e.event_date AS eventDate, e.total_budget AS totalBudget, e.updated_at AS updatedAt,
         COALESCE((SELECT SUM(bi.actual_minor) FROM budget_items bi
                   JOIN budget_categories bc ON bi.category_id = bc.id
                   WHERE bc.event_id = e.id), 0) AS actual_spent,
         COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id), 0) AS tasks_total,
         COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id AND status = 'completed'), 0) AS tasks_done
-      FROM events e WHERE e.owner_id = ? ORDER BY e.created_at DESC
-    `).all(ownerId);
+      FROM events e WHERE e.owner_id = ? ORDER BY e.created_at DESC LIMIT ? OFFSET ?
+    `).all(ownerId, limit, offset);
   }
 
-  getEventOrThrow(eventId: string, ownerId: string): EventRow {
+  getEventOrThrow(eventId: string, ownerId: string): EventDto {
     const row = this.db.prepare('SELECT * FROM events WHERE id = ? AND owner_id = ?').get(eventId, ownerId) as EventRow | undefined;
     if (!row) throw new NotFoundError('Event not found');
-    return row;
+    return toEventDto(row);
   }
 
-  updateEvent(eventId: string, ownerId: string, input: UpdateEventInput): EventRow {
+  updateEvent(eventId: string, ownerId: string, input: UpdateEventInput): EventDto {
     this.getEventOrThrow(eventId, ownerId); // IDOR check
 
     if (input.eventDate !== undefined) {
@@ -226,64 +246,3 @@ export class TimelineService {
   }
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// VENDOR SERVICE
-// ────────────────────────────────────────────────────────────────────────────
-export class VendorService {
-  private get db() {
-    return getDatabase();
-  }
-
-  private assertOwns(eventId: string, ownerId: string) {
-    const row = this.db.prepare('SELECT id FROM events WHERE id = ? AND owner_id = ?').get(eventId, ownerId);
-    if (!row) throw new NotFoundError('Event not found');
-  }
-
-  listVendors(eventId: string, ownerId: string) {
-    this.assertOwns(eventId, ownerId);
-    return (this.db.prepare('SELECT * FROM vendor_items WHERE event_id = ? ORDER BY category, name').all(eventId) as VendorRow[]).map(rowToVendor);
-  }
-
-  createVendor(eventId: string, ownerId: string, data: { category: string; name: string; status?: string; contactName?: string; contactEmail?: string; contactPhone?: string; quoteMinor?: number; note?: string }) {
-    this.assertOwns(eventId, ownerId);
-    const id = uuidv4();
-    this.db.prepare('INSERT INTO vendor_items (id, event_id, category, name, status, contact_name, contact_email, contact_phone, quote_minor, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(id, eventId, data.category, data.name, data.status ?? 'to_contact', data.contactName ?? null, data.contactEmail ?? null, data.contactPhone ?? null, data.quoteMinor ?? null, data.note ?? null);
-    return rowToVendor(this.db.prepare('SELECT * FROM vendor_items WHERE id = ?').get(id) as VendorRow);
-  }
-
-  updateVendor(vendorId: string, eventId: string, ownerId: string, patch: Partial<{ category: string; name: string; status: string; contactName: string; contactEmail: string; contactPhone: string; quoteMinor: number; note: string }>) {
-    this.assertOwns(eventId, ownerId);
-    const vendor = this.db.prepare('SELECT id FROM vendor_items WHERE id = ? AND event_id = ?').get(vendorId, eventId);
-    if (!vendor) throw new NotFoundError('Vendor not found');
-    const sets: string[] = [];
-    const vals: unknown[] = [];
-    const map: Record<string, string> = {
-      category: 'category',
-      name: 'name',
-      status: 'status',
-      contactName: 'contact_name',
-      contactEmail: 'contact_email',
-      contactPhone: 'contact_phone',
-      quoteMinor: 'quote_minor',
-      note: 'note',
-    };
-    for (const [k, col] of Object.entries(map)) {
-      if (patch[k as keyof typeof patch] !== undefined) {
-        sets.push(`${col} = ?`);
-        vals.push(patch[k as keyof typeof patch] ?? null);
-      }
-    }
-    if (sets.length > 0) {
-      vals.push(vendorId);
-      this.db.prepare(`UPDATE vendor_items SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
-    }
-    return rowToVendor(this.db.prepare('SELECT * FROM vendor_items WHERE id = ?').get(vendorId) as VendorRow);
-  }
-
-  deleteVendor(vendorId: string, eventId: string, ownerId: string) {
-    this.assertOwns(eventId, ownerId);
-    const result = this.db.prepare('DELETE FROM vendor_items WHERE id = ? AND event_id = ?').run(vendorId, eventId);
-    if (result.changes === 0) throw new NotFoundError('Vendor not found');
-  }
-}

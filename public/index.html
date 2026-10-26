@@ -26,6 +26,7 @@
           <span class="brand-title">PlanPal</span>
           <span class="brand-tagline">GenAI Event Planning</span>
         </div>
+        <div id="mock-ai-badge" class="mock-badge hidden" role="status">Demo mode (mock AI)</div>
       </div>
       <nav class="nav-actions" role="navigation" aria-label="Main Navigation">
         <div id="auth-nav-guest" class="nav-group">
@@ -45,7 +46,7 @@
     <!-- Auth Section -->
     <section id="auth-section" class="view-section">
       <div class="auth-card glass-panel">
-        <h1 id="auth-heading" class="auth-title">Welcome to PlanPal</h1>
+        <h1 id="auth-heading" class="auth-title" tabindex="-1">Welcome to PlanPal</h1>
         <p class="auth-desc">Your intelligent copilot for weddings, birthdays, and community gatherings.</p>
 
         <!-- Login Form -->
@@ -96,7 +97,7 @@
     <section id="dashboard-section" class="view-section hidden">
       <div class="section-header">
         <div>
-          <h1 class="page-title">My Events</h1>
+          <h1 id="dashboard-heading" class="page-title" tabindex="-1">My Events</h1>
           <p class="page-subtitle">Track, budget, and organize all your upcoming events in one workspace.</p>
         </div>
         <button id="btn-create-event-top" class="btn btn-primary">+ Create New Event</button>
@@ -108,8 +109,8 @@
     </section>
 
     <!-- Create Event Wizard Modal -->
-    <div id="create-event-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-event-title">
-      <div class="modal-dialog glass-panel">
+    <div id="create-event-modal" class="modal-backdrop hidden">
+      <div class="modal-dialog glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-event-title" tabindex="-1">
         <div class="modal-header">
           <h2 id="modal-event-title" class="modal-title">Create New Event</h2>
           <button id="btn-close-modal" class="btn-close" aria-label="Close dialog">&times;</button>
@@ -172,8 +173,8 @@
     </div>
 
     <!-- Edit Event Modal -->
-    <div id="edit-event-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-edit-event-title">
-      <div class="modal-dialog glass-panel">
+    <div id="edit-event-modal" class="modal-backdrop hidden">
+      <div class="modal-dialog glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-edit-event-title" tabindex="-1">
         <div class="modal-header">
           <h2 id="modal-edit-event-title" class="modal-title">Edit Event Settings</h2>
           <button id="btn-close-edit-modal" class="btn-close" aria-label="Close dialog">&times;</button>
@@ -216,8 +217,8 @@
     </div>
 
     <!-- Add Category Modal -->
-    <div id="add-category-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-add-cat-title">
-      <div class="modal-dialog glass-panel">
+    <div id="add-category-modal" class="modal-backdrop hidden">
+      <div class="modal-dialog glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-add-cat-title" tabindex="-1">
         <div class="modal-header">
           <h2 id="modal-add-cat-title" class="modal-title">Add Budget Category</h2>
           <button id="btn-close-cat-modal" class="btn-close" aria-label="Close dialog">&times;</button>
@@ -240,8 +241,8 @@
     </div>
 
     <!-- Add Line Item Modal -->
-    <div id="add-item-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-add-item-title">
-      <div class="modal-dialog glass-panel">
+    <div id="add-item-modal" class="modal-backdrop hidden">
+      <div class="modal-dialog glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-add-item-title" tabindex="-1">
         <div class="modal-header">
           <h2 id="modal-add-item-title" class="modal-title">Add Line Item</h2>
           <button id="btn-close-item-modal" class="btn-close" aria-label="Close dialog">&times;</button>
@@ -275,8 +276,8 @@
     </div>
 
     <!-- Add Task Modal -->
-    <div id="add-task-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-add-task-title">
-      <div class="modal-dialog glass-panel">
+    <div id="add-task-modal" class="modal-backdrop hidden">
+      <div class="modal-dialog glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-add-task-title" tabindex="-1">
         <div class="modal-header">
           <h2 id="modal-add-task-title" class="modal-title">Add Timeline Milestone</h2>
           <button id="btn-close-task-modal" class="btn-close" aria-label="Close dialog">&times;</button>
@@ -321,8 +322,8 @@
     </div>
 
     <!-- Add Vendor Modal -->
-    <div id="add-vendor-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-add-vendor-title">
-      <div class="modal-dialog glass-panel">
+    <div id="add-vendor-modal" class="modal-backdrop hidden">
+      <div class="modal-dialog glass-panel" role="dialog" aria-modal="true" aria-labelledby="modal-add-vendor-title" tabindex="-1">
         <div class="modal-header">
           <h2 id="modal-add-vendor-title" class="modal-title">Add Vendor Entry</h2>
           <button id="btn-close-vendor-modal" class="btn-close" aria-label="Close dialog">&times;</button>
@@ -393,7 +394,7 @@
               <span id="detail-date" class="date-pill">2026-11-20</span>
               <span id="detail-guests" class="guest-pill">120 Guests</span>
             </div>
-            <h1 id="detail-name" class="detail-title">Alice & Charlie Wedding</h1>
+            <h1 id="detail-name" class="detail-title" tabindex="-1">Alice & Charlie Wedding</h1>
             <p id="detail-brief" class="detail-brief-snippet"></p>
           </div>
           <div class="workspace-actions">

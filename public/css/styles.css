@@ -915,3 +915,19 @@ body {
   flex-wrap: wrap;
   gap: 1rem;
 }
+
+/* Demo Mode Badge (Finding 18) */
+.mock-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  margin-left: 0.75rem;
+  letter-spacing: 0.02em;
+}
+

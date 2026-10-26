@@ -384,6 +384,16 @@ describe('REQ-009 Edit and Delete', () => {
     expect(r.body.event.name).toBe('Updated Name');
   });
 
+  it('PATCH only name preserves currency and brief (Finding 22)', async () => {
+    const created = await createEvent(token, { currency: 'EUR', brief: 'A preserved European vision' });
+    const evId = created.body.event.id;
+    const r = await request(app).patch(`/api/events/${evId}`).set(auth(token)).send({ name: 'Only Name Changed' });
+    expect(r.status).toBe(200);
+    expect(r.body.event.name).toBe('Only Name Changed');
+    expect(r.body.event.currency).toBe('EUR');
+    expect(r.body.event.brief).toBe('A preserved European vision');
+  });
+
   it('deletes event and cascades to children', async () => {
     const t = await request(app).post(`/api/events/${eventId}/timeline`).set(auth(token)).send({ title: 'A task', offsetDays: 30 });
     expect(t.status).toBe(201);
@@ -425,6 +435,9 @@ describe('SEC-002 IDOR Prevention — cross-tenant isolation', () => {
   let tokenB: string;
   let eventAId: string;
   let taskAId: string;
+  let catAId: string;
+  let itemAId: string;
+  let vendorAId: string;
 
   beforeAll(async () => {
     await register('alice_idor@test.com', 'Alice');
@@ -436,6 +449,15 @@ describe('SEC-002 IDOR Prevention — cross-tenant isolation', () => {
     eventAId = r.body.event.id;
     const t = await request(app).post(`/api/events/${eventAId}/timeline`).set(auth(tokenA)).send({ title: 'Private Task', offsetDays: 30 });
     taskAId = t.body.task.id;
+
+    const cat = await request(app).post(`/api/events/${eventAId}/budget/categories`).set(auth(tokenA)).send({ name: 'Private Catering', plannedMinor: 50_000 });
+    catAId = cat.body.category.id;
+
+    const item = await request(app).post(`/api/events/${eventAId}/budget/categories/${catAId}/items`).set(auth(tokenA)).send({ label: 'Champagne', plannedMinor: 20_000 });
+    itemAId = item.body.item.id;
+
+    const v = await request(app).post(`/api/events/${eventAId}/vendors`).set(auth(tokenA)).send({ category: 'Catering', name: 'Private Chef' });
+    vendorAId = v.body.vendor.id;
   });
 
   it('Bob cannot read Alice\'s event (404, not 403)', async () => {
@@ -453,6 +475,21 @@ describe('SEC-002 IDOR Prevention — cross-tenant isolation', () => {
     expect(r.status).toBe(404);
   });
 
+  it('Bob cannot update Alice\'s budget category (Finding 26)', async () => {
+    const r = await request(app).patch(`/api/events/${eventAId}/budget/categories/${catAId}`).set(auth(tokenB)).send({ name: 'Hacked' });
+    expect(r.status).toBe(404);
+  });
+
+  it('Bob cannot update Alice\'s budget item (Finding 26)', async () => {
+    const r = await request(app).patch(`/api/events/${eventAId}/budget/categories/${catAId}/items/${itemAId}`).set(auth(tokenB)).send({ label: 'Hacked Item' });
+    expect(r.status).toBe(404);
+  });
+
+  it('Bob cannot delete Alice\'s budget item (Finding 26)', async () => {
+    const r = await request(app).delete(`/api/events/${eventAId}/budget/categories/${catAId}/items/${itemAId}`).set(auth(tokenB));
+    expect(r.status).toBe(404);
+  });
+
   it('Bob cannot read Alice\'s timeline', async () => {
     const r = await request(app).get(`/api/events/${eventAId}/timeline`).set(auth(tokenB));
     expect(r.status).toBe(404);
@@ -460,6 +497,21 @@ describe('SEC-002 IDOR Prevention — cross-tenant isolation', () => {
 
   it('Bob cannot update Alice\'s task', async () => {
     const r = await request(app).patch(`/api/events/${eventAId}/timeline/${taskAId}`).set(auth(tokenB)).send({ status: 'completed' });
+    expect(r.status).toBe(404);
+  });
+
+  it('Bob cannot read Alice\'s vendors (Finding 26)', async () => {
+    const r = await request(app).get(`/api/events/${eventAId}/vendors`).set(auth(tokenB));
+    expect(r.status).toBe(404);
+  });
+
+  it('Bob cannot update Alice\'s vendor (Finding 26)', async () => {
+    const r = await request(app).patch(`/api/events/${eventAId}/vendors/${vendorAId}`).set(auth(tokenB)).send({ name: 'Hacked Vendor' });
+    expect(r.status).toBe(404);
+  });
+
+  it('Bob cannot delete Alice\'s vendor (Finding 26)', async () => {
+    const r = await request(app).delete(`/api/events/${eventAId}/vendors/${vendorAId}`).set(auth(tokenB));
     expect(r.status).toBe(404);
   });
 

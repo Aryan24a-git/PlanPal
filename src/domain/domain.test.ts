@@ -214,8 +214,8 @@ describe('AI Plan Normalizer — V2-03, SEC-004', () => {
   });
 
   it('computes dueDate from daysBeforeEvent on all tasks', () => {
-    const result = normalizeAiPlan(basePlan, 10_000, '2026-12-25', 'wedding');
-    expect(result.plan.timelineTasks[0]?.dueDate).toBe(computeDueDate('2026-12-25', 90));
+    const result = normalizeAiPlan(basePlan, 10_000, '2027-12-25', 'wedding');
+    expect(result.plan.timelineTasks[0]?.dueDate).toBe(computeDueDate('2027-12-25', 90));
   });
 
   it('marks all ideas with estimate: true (DATA-001)', () => {
@@ -275,6 +275,39 @@ describe('AI Plan Normalizer — V2-03, SEC-004', () => {
     const result = normalizeAiPlan(basePlan, 10_000, 'invalid-date', 'wedding');
     expect(result.warnings.length).toBeGreaterThan(0);
     expect(result.plan.timelineTasks[0]?.dueDate).toBe('invalid-date');
+  });
+
+  it('handles duplicate category names correctly without breaking budget sum invariant (Finding 23)', () => {
+    const plan = {
+      ...basePlan,
+      budgetCategories: [
+        { name: 'Decor', allocatedAmount: 2000, items: [{ name: 'Flowers', plannedAmount: 1000 }] },
+        { name: 'Decor', allocatedAmount: 8000, items: [{ name: 'Lighting', plannedAmount: 5000 }] },
+      ],
+    };
+    const result = normalizeAiPlan(plan as typeof basePlan, 10000, '2026-12-25', 'wedding');
+    const sum = result.plan.budgetCategories.reduce((acc, c) => acc + c.allocatedAmount, 0);
+    expect(sum).toBe(10000);
+    // Categories maintain their rescaled proportional amounts
+    expect(result.plan.budgetCategories[0]?.allocatedAmount).toBe(2000);
+    expect(result.plan.budgetCategories[1]?.allocatedAmount).toBe(8000);
+    // Items are rescaled to match their category allocation
+    expect(result.plan.budgetCategories[0]?.items[0]?.plannedAmount).toBe(2000);
+    expect(result.plan.budgetCategories[1]?.items[0]?.plannedAmount).toBe(8000);
+  });
+
+  it('clamps daysBeforeEvent offsets when event is in the near future (Finding 24)', () => {
+    // 14 days from now
+    const targetDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const plan = {
+      ...basePlan,
+      timelineTasks: [
+        { title: 'Way too early task', daysBeforeEvent: 90, priority: 'high' as const },
+      ],
+    };
+    const result = normalizeAiPlan(plan as typeof basePlan, 10000, targetDate, 'birthday');
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.plan.timelineTasks[0]?.daysBeforeEvent).toBeLessThanOrEqual(14);
   });
 });
 

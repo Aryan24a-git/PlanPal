@@ -38,14 +38,34 @@ export function normalizeAiPlan(
   // 2. Rescale allocations so sum === totalBudget exactly
   const rawAllocations = validCategories.map((c) => c.allocatedAmount);
   const rescaled = rescaleAllocations(rawAllocations, totalBudget);
-  const budgetCategories = validCategories.map((cat, i) => ({
-    ...cat,
-    allocatedAmount: rescaled[i] ?? 0,
-    items: cat.items.map((item) => ({
+  const budgetCategories = validCategories.map((cat, i) => {
+    const allocated = rescaled[i] ?? 0;
+    let items = cat.items.map((item) => ({
       ...item,
       plannedAmount: Math.max(0, item.plannedAmount),
-    })),
-  }));
+    }));
+
+    // Finding 23: Rescale items so their sum equals the category allocation
+    if (items.length > 0 && allocated > 0) {
+      const rawItemSum = items.reduce((sum, item) => sum + item.plannedAmount, 0);
+      if (rawItemSum > 0) {
+        const itemRescaled = rescaleAllocations(
+          items.map((it) => it.plannedAmount),
+          allocated
+        );
+        items = items.map((it, idx) => ({
+          ...it,
+          plannedAmount: itemRescaled[idx] ?? it.plannedAmount,
+        }));
+      }
+    }
+
+    return {
+      ...cat,
+      allocatedAmount: allocated,
+      items,
+    };
+  });
 
   // Verify invariant
   const allocSum = budgetCategories.reduce((s, c) => s + c.allocatedAmount, 0);
@@ -54,6 +74,12 @@ export function normalizeAiPlan(
   }
 
   // 3. Validate & compute timeline tasks
+  const now = new Date();
+  const eventTarget = new Date(eventDate);
+  const diffDays = Number.isNaN(eventTarget.getTime())
+    ? 3650
+    : Math.max(0, Math.floor((eventTarget.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+
   const timelineTasks = rawPlan.timelineTasks
     .filter((t) => {
       const result = AIDraftTaskSchema.safeParse(t);
@@ -61,25 +87,32 @@ export function normalizeAiPlan(
         droppedItems.push(`Task "${t.title}": ${result.error.issues[0]?.message}`);
         return false;
       }
-      // Clamp to valid range
-      if (t.daysBeforeEvent < 0 || t.daysBeforeEvent > 3650) {
-        droppedItems.push(`Task "${t.title}": daysBeforeEvent out of range [0, 3650]`);
+      if (t.daysBeforeEvent < 0) {
+        droppedItems.push(`Task "${t.title}": daysBeforeEvent cannot be negative`);
         return false;
       }
       return true;
     })
     .map((t) => {
+      let offset = t.daysBeforeEvent;
+      // Finding 24: Clamp offset to days until event so tasks never land in the past
+      if (offset > diffDays) {
+        warnings.push(`Task "${t.title}" offset (${offset}d) was clamped to available days until event (${diffDays}d)`);
+        offset = diffDays;
+      }
+
       let dueDate: string;
       try {
-        dueDate = computeDueDate(eventDate, t.daysBeforeEvent);
+        dueDate = computeDueDate(eventDate, offset);
       } catch {
         warnings.push(`Could not compute due date for task "${t.title}"`);
         dueDate = eventDate;
       }
       return {
         ...t,
+        daysBeforeEvent: offset,
         dueDate,
-        phase: assignPhaseLabel(t.daysBeforeEvent),
+        phase: assignPhaseLabel(offset),
         pinned: false,
       };
     });
