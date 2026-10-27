@@ -26,19 +26,6 @@ Planning complex events (weddings, birthday parties, community festivals) is str
 
 ---
 
-## 📊 Evaluation Criteria Alignment & Verified Evidence
-
-| Evaluation Criteria | Impact | Score | Key Architectural Proof & Evidence |
-| :--- | :--- | :---: | :--- |
-| **Code Quality** | **High** | **98% (A+)** | • **Zero Type Suppressions**: Strict TypeScript (`noImplicitAny`, `strictNullChecks`, `noUncheckedIndexedAccess`).<br>• **Layered Architecture**: `UI → Routes → Services → Pure Domain / Repositories`. Domain logic has zero external I/O.<br>• **File Size Invariant (`NFR-003`)**: Every backend source file, client module, and test suite is strictly ≤ 289 lines (enforced in CI via `scripts/check-line-counts.js`). |
-| **Problem Alignment** | **High** | **100% (A+)** | • Full support for **Wedding, Birthday, and Community** flows with specialized category seeding and timeline math.<br>• Verified against all 3 user personas across API-level journey tests and browser walkthroughs.<br>• Context-aware AI Refinement (advisory diffs built with real plan context). |
-| **Security** | **Medium** | **99% (A+)** | • **IDOR-Proof**: Every database query and mutation is strictly scoped by authenticated `owner_id = ?` (foreign resources return 404).<br>• **Auth**: `bcryptjs` salt cost 12, timing-safe authentication (dummy hash on unknown users), deleted-account token rejection.<br>• **Strict CSP**: `script-src 'self'` with zero `'unsafe-inline'`, universal `escapeHtml()` attribute sanitization.<br>• **CI Secret Scanner**: `gitleaks` automated scanner configured with allowlist and zero leaks detected. |
-| **Efficiency** | **Medium** | **96% (A)** | • **Optimized Database**: Single correlated query for dashboard progress rollups; indexed foreign keys; SQLite WAL mode.<br>• **Modular Client**: 51 KB unminified vanilla ES modules across 10 modular files (~13 KB transfer over gzip), zero framework bloat.<br>• **Deterministic Speed**: Budget math calculates in < 1ms on the server. AI calls bounded by rate limits & daily user quotas. |
-| **Testing** | **Low** | **99% (A+)** | • **104/104 Tests Passing**: Pure domain unit tests, cross-tenant IDOR tests, API journey tests, vendor seeding tests, quota enforcement tests, and axe-core accessibility tests.<br>• **97.77% Line Coverage on the Pure Domain Layer**: `budget.ts` (100%), `timeline.ts` (100%), `vendors.ts` (100%), `aiNormalizer.ts` (93.75%).<br>• Single command full gate: `npm run check:full`. |
-| **Accessibility** | **Low** | **96% (A)** | • **Axe-core Automated Audit**: 0 violations across all 6 views (`axe-audit-results.json`), landmark roles, 44px minimum touch targets.<br>• **W3C APG Dialogs**: Focus trap (`Tab`/`Shift+Tab`), auto-focus on open, focus restoration on close, `Escape` key dismissal.<br>• **Live Announcer**: `aria-live="polite"` dynamic updates for AI status changes. Screen reader verified. |
-
----
-
 ## 🏗️ Architecture & Layering Rules
 
 PlanPal enforces a strict one-way dependency flow:
@@ -344,8 +331,4 @@ To maintain full engineering transparency:
 3. **Budget Allocation Ceilings**: A category planned amount exceeding the total event budget displays an overall over-budget warning metric on the dashboard, but does not block category creation or display per-row warning badges.
 4. **Testing Environment Scope**: Rate limiters and static file middleware are bypassed in test harnesses to ensure sub-second local test execution.
 
----
 
-## 📄 License
-
-ISC License. Built for the Event Planning Assistant Challenge.
