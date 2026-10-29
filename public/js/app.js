@@ -96,6 +96,39 @@ export async function openEventWorkspace(eventId) {
   }
 }
 
+export async function refreshBudget(eventId) {
+  if (!currentEventData || currentEventData.event.id !== eventId) return;
+  const budget = await apiRequest(`/api/events/${eventId}/budget`);
+  currentEventData.budget = budget;
+  renderBudgetMetrics(budget, currentEventData.event.currency);
+  renderBudgetCategories(budget.categories || [], currentEventData.event.currency, eventId, () => refreshBudget(eventId));
+  announce('Budget updated');
+}
+
+export async function refreshTimeline(eventId) {
+  if (!currentEventData || currentEventData.event.id !== eventId) return;
+  const { tasks } = await apiRequest(`/api/events/${eventId}/timeline`);
+  currentEventData.tasks = tasks;
+  renderTimeline(tasks || [], eventId, () => refreshTimeline(eventId));
+  announce('Timeline updated');
+}
+
+export async function refreshVendors(eventId) {
+  if (!currentEventData || currentEventData.event.id !== eventId) return;
+  const { vendors } = await apiRequest(`/api/events/${eventId}/vendors`);
+  currentEventData.vendors = vendors;
+  renderVendors(vendors || [], currentEventData.event.currency, eventId, () => refreshVendors(eventId));
+  announce('Vendors updated');
+}
+
+export async function refreshIdeas(eventId) {
+  if (!currentEventData || currentEventData.event.id !== eventId) return;
+  const { ideas } = await apiRequest(`/api/events/${eventId}/ideas`);
+  currentEventData.ideas = ideas;
+  renderIdeas(ideas || [], currentEventData.event.currency, eventId, () => refreshIdeas(eventId));
+  announce('Ideas updated');
+}
+
 function renderEventWorkspace() {
   if (!currentEventData) return;
   const { event, budget, tasks, vendors, ideas } = currentEventData;
@@ -113,10 +146,10 @@ function renderEventWorkspace() {
   document.getElementById('edit-event-brief').value = event.brief;
 
   renderBudgetMetrics(budget, event.currency);
-  renderBudgetCategories(budget.categories || [], event.currency, event.id, () => openEventWorkspace(event.id));
-  renderTimeline(tasks || [], event.id, () => openEventWorkspace(event.id));
-  renderVendors(vendors || [], event.currency, event.id, () => openEventWorkspace(event.id));
-  renderIdeas(ideas || [], event.currency, event.id, () => openEventWorkspace(event.id));
+  renderBudgetCategories(budget.categories || [], event.currency, event.id, () => refreshBudget(event.id));
+  renderTimeline(tasks || [], event.id, () => refreshTimeline(event.id));
+  renderVendors(vendors || [], event.currency, event.id, () => refreshVendors(event.id));
+  renderIdeas(ideas || [], event.currency, event.id, () => refreshIdeas(event.id));
 }
 
 function setupModalTriggers() {
@@ -198,22 +231,22 @@ async function initApp() {
 
   initBudgetForms({
     getCurrentEventId: () => currentEventData?.event?.id,
-    onRefresh: () => openEventWorkspace(currentEventData.event.id),
+    onRefresh: () => refreshBudget(currentEventData.event.id),
   });
 
   initTimelineForms({
     getCurrentEventId: () => currentEventData?.event?.id,
-    onRefresh: () => openEventWorkspace(currentEventData.event.id),
+    onRefresh: () => refreshTimeline(currentEventData.event.id),
   });
 
   initVendorForms({
     getCurrentEventId: () => currentEventData?.event?.id,
-    onRefresh: () => openEventWorkspace(currentEventData.event.id),
+    onRefresh: () => refreshVendors(currentEventData.event.id),
   });
 
   initIdeasActions({
     getCurrentEventId: () => currentEventData?.event?.id,
-    onRefresh: () => openEventWorkspace(currentEventData.event.id),
+    onRefresh: () => refreshIdeas(currentEventData.event.id),
   });
 
   initAIActions({
