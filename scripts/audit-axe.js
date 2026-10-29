@@ -265,11 +265,13 @@ async function runAudits() {
   }
 
   // Save report as artifact/evidence
+  const docsDir = path.join(__dirname, '..', 'docs');
+  if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true });
   fs.writeFileSync(
-    path.join(__dirname, '..', 'axe-audit-results.json'),
+    path.join(docsDir, 'axe-audit-results.json'),
     JSON.stringify(report, null, 2)
   );
-  console.log('\nReport written to axe-audit-results.json');
+  console.log('\nReport written to docs/axe-audit-results.json');
 }
 
 runAudits().catch((err) => {

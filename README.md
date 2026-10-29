@@ -5,12 +5,11 @@
 ![Domain Coverage](https://img.shields.io/badge/domain%20coverage-97.77%25-brightgreen)
 [![Gitleaks Clean](https://img.shields.io/badge/gitleaks-clean-blue)](https://github.com/Aryan24a-git/PlanPal/actions/workflows/ci.yml)
 ![Vulnerabilities](https://img.shields.io/badge/vulnerabilities-0-brightgreen)
-![A11y Axe Core](https://img.shields.io/badge/axe--core-0%20violations-brightgreen)
-[![WCAG 2.1 AA](https://img.shields.io/badge/WCAG%202.1%20AA-Axe--Verified%20(0%20violations)-blue)](https://github.com/Aryan24a-git/PlanPal/blob/main/axe-audit-results.json)
+[![Axe Core](https://img.shields.io/badge/axe--core-0%20violations-brightgreen)](https://github.com/Aryan24a-git/PlanPal/blob/main/docs/axe-audit-results.json)
 ![Node](https://img.shields.io/badge/node-v24.x-green)
 ![License](https://img.shields.io/badge/license-ISC-blue)
 
-> **A reliable, full-stack, AI-powered event planning copilot built with deterministic pure-domain arithmetic, strict TypeScript layering, IDOR-safe architecture, and WCAG 2.1 AA accessibility.**
+> **A reliable, full-stack, AI-powered event planning copilot built with deterministic pure-domain arithmetic, strict TypeScript layering, IDOR-safe architecture, and automated axe-core verified accessibility.**
 
 ---
 
@@ -28,12 +27,12 @@ Planning complex events (weddings, birthday parties, community festivals) is str
 
 ## 🏗️ Architecture & Layering Rules
 
-PlanPal enforces a strict one-way dependency flow:
+PlanPal enforces a strict one-way dependency flow with a central composition root container:
 
 ```
 ┌────────────────────────────────────────────────────────┐
 │                   Vanilla Web Client                   │
-│         (Accessible Glassmorphism UI / Vanilla JS)     │
+│        (Bundled 32.9 KB ESModule / Glassmorphism UI)   │
 └───────────────────────────┬────────────────────────────┘
                             │ HTTP / JSON
 ┌───────────────────────────▼────────────────────────────┐
@@ -42,16 +41,16 @@ PlanPal enforces a strict one-way dependency flow:
 └───────────────────────────┬────────────────────────────┘
                             │
 ┌───────────────────────────▼────────────────────────────┐
-│                   Service Layer                        │
-│    (Ownership Scoping, Transactions, AI Quotas)        │
+│            Composition Root (DI Container)             │
+│      (Auth, Events, Budget, Timeline, Vendors, AI)     │
 └─────────────┬────────────────────────────┬─────────────┘
               │                            │
 ┌─────────────▼──────────────┐ ┌───────────▼─────────────┐
 │  Pure TypeScript Domain    │ │    Database Layer       │
-│  (Budget Math, Timeline    │ │ (SQLite WAL, Cascade    │
-│   Offsets, Normalizer)     │ │  Foreign Key Indexing)  │
-│      *ZERO I/O*            │ └─────────────────────────┘
-└─────────────┬──────────────┘
+│  (Budget Math, Timeline    │ │ (SQLite WAL, Normal     │
+│   Offsets, Normalizer)     │ │  Pragmas, Statement     │
+│      *ZERO I/O*            │ │  Cache, Cascade FKs)    │
+└─────────────┬──────────────┘ └─────────────────────────┘
               │
 ┌─────────────▼──────────────┐
 │     AI Provider Adapters   │
@@ -83,11 +82,13 @@ PlanPal enforces a strict one-way dependency flow:
 - Category-level planned allocations vs. actual itemized spending.
 - Visual progress meters with real-time remaining balance calculations.
 - Over-budget warning badges with explicit icons and text (never color alone).
+- Focused partial tab refreshes: line item updates re-render only the budget panel without reloading the workspace.
 
 ### 4. 📅 Dynamic Timeline Milestones
 - Chronologically sorted tasks relative to the event date (*"90 days before"*, *"30 days before"*).
 - One-click completion checkboxes and real-time dashboard progress rollups.
 - Moving the event date automatically re-anchors every milestone.
+- Unpinned tasks shift automatically; pinned tasks retain their absolute dates.
 
 ### 5. 🤝 Vendor Directory CRM
 - Pre-seeded vendor slots customized per event type (*Catering, Photography, Venue, Music, Decor*).
@@ -99,9 +100,9 @@ PlanPal enforces a strict one-way dependency flow:
 - Realistic estimated cost ranges clearly marked as *"estimate"*.
 - One-click **"Save to Event"** or **"Dismiss"** actions.
 
-### 7. ✨ AI Plan Refinement (Diff Proposals)
-- Natural-language instructions (e.g., *"Increase photography budget by $500 and add a rehearsal dinner task"*).
-- Produces structured advisory change proposals (action, description, and rationale) across budget, timeline, and vendors.
+### 7. ✨ AI Plan Refinement (Advisory Text Proposals)
+- Natural-language instructions (e.g., *"Cut food budget by 10% and allocate more to live music"*).
+- Produces structured advisory text suggestions, explanations, and proposed allocations across budget, timeline, and vendors.
 - User can inspect and apply or discard changes without risk of corrupting existing data.
 
 ---
@@ -112,9 +113,9 @@ PlanPal enforces a strict one-way dependency flow:
 | :--- | :--- | :--- | :--- |
 | **Account Takeover / Brute Force** | Credential stuffing, weak password storage | Salted `bcryptjs` (cost 12), timing-safe comparisons, generic error messages, deleted-token rejection | `SEC-001` |
 | **Insecure Direct Object Reference (IDOR)** | Malicious user accessing or altering another user's event | All repository queries and mutations strictly enforce `owner_id = ?`. Foreign resources return `404 Not Found`. | `SEC-002` |
-| **Input Tampering & Injection** | Malicious payloads or SQL injection | Strict Zod boundary validation on all endpoints with string caps (`brief` ≤ 2000 chars). Parameterized SQLite statements. | `SEC-003` |
-| **Prompt Injection & Malicious Output** | Prompt hijacking via brief text | Delimited user inputs (`<user_brief>...</user_brief>`); Zod schema-constrained JSON outputs. | `SEC-004` |
-| **Denial of Service / AI Cost Abuse** | High-volume API calls exhausting LLM credits | Daily request quotas tracked per user in `ai_usage` table; rate-limiting middleware (`express-rate-limit`). | `SEC-005` |
+| **Input Tampering & Injection** | Malicious payloads or SQL injection | Strict Zod boundary validation on all endpoints with string caps (`brief` ≤ 2000 chars). Parameterized SQLite statements with strict column whitelisting (`buildUpdate`). | `SEC-003` |
+| **Prompt Injection & Malicious Output** | Prompt hijacking via brief text | Delimited user inputs (`<user_brief>...</user_brief>`); Zod schema-constrained JSON outputs; strict 502 error mapping. | `SEC-004` |
+| **Denial of Service / AI Cost Abuse** | High-volume API calls exhausting LLM credits | Daily request quotas tracked per user in `ai_usage` table with atomic counter increment & refund on failure; rate-limiting middleware (`express-rate-limit`). | `SEC-005` |
 | **Cross-Site Scripting (XSS)** | Malicious script execution in user browser | Strict CSP (`script-src 'self'`, zero `'unsafe-inline'`), universal `escapeHtml()` sanitization across all templates. | `SEC-006` |
 | **Secret Leakage** | Committing API keys or secrets | `.env` gitignored; `.gitleaks.toml` allowlist; automated `gitleaks` CI scanner; startup fail-fast on placeholder secrets. | `SEC-007` |
 | **Information Disclosure in Logs** | Sensitive credentials or PII appearing in logs | Structured JSON logger with redaction allow-list; sensitive fields (passwords, tokens, briefs) stripped. | `SEC-008` |
@@ -122,17 +123,18 @@ PlanPal enforces a strict one-way dependency flow:
 
 ---
 
-## ♿ Accessibility (WCAG 2.1 AA)
+## ♿ Accessibility (Axe-Core Verified)
 
-PlanPal is built to ensure full accessibility for users navigating with keyboards or screen readers:
+PlanPal is engineered for keyboard and screen reader accessibility:
 
-- **Automated Axe-Core Audits**: 0 violations across all 6 views (`Auth`, `Dashboard`, `Budget`, `Timeline`, `Vendors`, `Ideas`), recorded in `axe-audit-results.json`.
+- **Automated Axe-Core Audits**: 0 violations across all 6 views (`Auth`, `Dashboard`, `Budget`, `Timeline`, `Vendors`, `Ideas`), recorded in `docs/axe-audit-results.json`.
 - **W3C APG Dialogs**: Focus trap (`Tab`/`Shift+Tab`) inside modals, auto-focus on open, focus restoration on close, and `Escape` key dismissal.
 - **Dynamic Live Region**: `#live-announcer` with `aria-live="polite"` announces AI generation, savings, and errors.
 - **Form Association**: Explicit `<label for="...">` and `aria-label` pairing for every input, select, and icon-only button.
 - **Touch Targets**: Minimum 44px hit target on all interactive elements (`styles.css`).
 - **Visible Focus**: High-contrast outline rings for keyboard navigation.
-- **Screen Reader Readiness**: Fully structured for screen readers (NVDA, Narrator, VoiceOver) with programmatic labels, landmark regions, and live announcements, validated via automated axe-core DOM test suites with 0 violations.
+- **Focus Restoration**: In partial tab refreshes, keyboard focus is dynamically restored to the active panel trigger after re-rendering.
+- **Semantic Structure**: Proper heading hierarchy, landmark regions (`banner`, `main`, `region`, `contentinfo`), and ARIA roles.
 
 ---
 
@@ -142,18 +144,18 @@ PlanPal is built to ensure full accessibility for users navigating with keyboard
 | :--- | :--- | :--- |
 | **Runtime & Language** | Node.js (v24) + Strict TypeScript | End-to-end type safety across domain, services, and API. |
 | **Validation** | Zod | Single source of truth for TypeScript types, API boundary parsing, and AI output schemas. |
-| **Database** | SQLite (`better-sqlite3`) | ACID transactional integrity (`WAL` mode), foreign key cascading, zero network latency. |
-| **Security & Auth** | `bcryptjs` + `jsonwebtoken` + CSP | IDOR-safe owner scoping, secure password hashing, strict security headers. |
-| **AI Adapters** | Groq Cloud (`llama-3.3-70b-versatile` / `openai/gpt-oss-120b`) + `MockAIProvider` | Schema-constrained JSON generation, bounded token limits, deterministic post-normalization. |
+| **Database** | SQLite (`better-sqlite3`) | ACID transactional integrity (`WAL` mode, `synchronous=NORMAL`, `temp_store=MEMORY`), prepared statement cache (`WeakMap`), composite indexes. |
+| **Security & Auth** | `bcryptjs` + `jsonwebtoken` + CSP | IDOR-safe owner scoping, secure password hashing, strict security headers, cheap `SELECT 1` token validation. |
+| **AI Adapters** | Groq Cloud (`openai/gpt-oss-120b`) + `MockAIProvider` | Schema-constrained JSON generation, deterministic post-normalization, `AbortSignal.timeout` bounded execution. |
 | **Testing** | Vitest + Supertest + Vitest Coverage V8 + Axe-Core | Fast ESM test execution, pure domain unit coverage (97.77%), API integration, automated a11y. |
-| **Frontend** | Semantic HTML5, Vanilla CSS Design System | Zero build-step bundle bloat (~13 KB gzip), instant loading, full WCAG 2.1 AA keyboard & ARIA compliance. |
+| **Frontend** | Semantic HTML5, Vanilla CSS, esbuild | Pre-bundled & minified client bundle (`32.9 KB`, `~8.5 KB` gzip), instant loading, full keyboard & ARIA semantics with 0 axe-core violations. |
 
 ---
 
 ## 🚀 Quick Start & Local Development
 
 ### Prerequisites
-- Node.js 24 (Node v24.x recommended, tested on Node 24)
+- Node.js 24 (Node v24.x recommended, tested on Node 24.11.1)
 - npm 10+
 
 ### 1. Installation
@@ -201,7 +203,7 @@ Open **`http://localhost:4000`** in your browser.
 
 ## 🧪 Testing & Verification Pipeline
 
-Run the complete verification pipeline (File size gate, TypeScript check, Oxlint + ESLint check, 113 tests with coverage, dependency audit, and axe-core audit):
+Run the complete verification pipeline (File size gate, Oxlint + ESLint check, TypeScript compile check, 113 tests with coverage, and dependency audit):
 
 ```bash
 npm run check:full
@@ -215,19 +217,25 @@ npm test
 # Run tests with coverage report (97.77% pure domain line coverage)
 npm run test:coverage
 
-# Run automated axe-core accessibility audit across all 6 views
-node scripts/audit-axe.js
-
-# Verify file size rule (<= 300 lines across all source files - NFR-003)
-npm run check:lines
+# Run linting (oxlint --deny-warnings && eslint .)
+npm run lint
 
 # TypeScript compile check (0 errors)
 npm run typecheck
 
+# Verify file size rule (<= 300 lines across all source files - NFR-003)
+npm run check:lines
+
+# Run automated axe-core accessibility audit across all 6 views
+node scripts/audit-axe.js
+
+# Run real headless Chrome CDP browser journey verification suite
+npm run test:browser
+
 # Dependency security audit (0 vulnerabilities)
 npm audit
 
-# Production build
+# Build client bundle (esbuild) and compile TypeScript backend
 npm run build
 ```
 
@@ -236,7 +244,7 @@ npm run build
 ## 🚢 Deployment (Docker & Cloud)
 
 ### Option A: Standalone Docker Deployment
-PlanPal includes a multi-stage `Dockerfile` with root privilege dropping via `su-exec` to guarantee permission safety on persistent volumes:
+PlanPal includes a multi-stage `Dockerfile` creating an unprivileged user to guarantee runtime container security:
 
 ```bash
 # Build the container image
@@ -258,7 +266,7 @@ curl -fsS http://localhost:4000/api/health
 ### Option B: Cloud Deployment (Render / Koyeb / Fly.io)
 PlanPal is completely self-contained with no external database dependencies:
 1. Connect your repository to **Render** or **Koyeb**.
-2. Select **Docker** runtime.
+2. Select **Docker** or **Node** runtime (Build command: `npm run build`, Start command: `npm start`).
 3. Set environment variables:
    - `NODE_ENV=production`
    - `PORT=4000`
@@ -269,39 +277,49 @@ PlanPal is completely self-contained with no external database dependencies:
    - `DATABASE_URL=/data/planpal.db`
 4. Deploy!
 
-> **Tip for Render Free Tier**: Render free instances spin down after 15 minutes of inactivity. Set up a free 10-minute ping monitor on [cron-job.org](https://cron-job.org) targeting `https://<YOUR-APP>.onrender.com/api/health` to keep your instance warm 24/7.
-
 ---
 
 ## 📂 Project Structure
 
 ```
-├── .github/workflows/ci.yml    # CI Quality Gates (Typecheck, tests, gitleaks, audit, docker)
-├── .gitleaks.toml              # Secret scanner configuration and allowlists
-├── Dockerfile                  # Multi-stage Alpine container with su-exec privilege drop
-├── docker-entrypoint.sh        # Volume permission initialization script
+├── .github/workflows/ci.yml    # CI Quality Gates (Lint, Typecheck, Tests, Axe, Audit, Docker smoke)
+├── .oxlintrc.json              # Oxlint TypeScript and client static analysis configuration
+├── eslint.config.js            # ESLint flat configuration
+├── Dockerfile                  # Multi-stage production container
+├── docs/
+│   └── axe-audit-results.json  # Axe-core automated accessibility audit report
 ├── scripts/
-│   ├── audit-axe.js            # Automated client-rendered axe-core a11y auditor
-│   └── check-line-counts.js    # NFR-003 file size enforcement gate (<= 300 lines)
+│   ├── audit-axe.js            # Client-rendered axe-core a11y auditor
+│   ├── check-line-counts.js    # NFR-003 file size enforcement gate (<= 300 lines)
+│   └── verify-real-browser.js  # Headless Chrome CDP end-to-end journey test suite
 ├── public/
-│   ├── index.html              # Semantic, accessible HTML5 single-page application
-│   ├── css/styles.css          # Glassmorphic responsive design system
-│   ├── dist/                   # Minified single client bundle (33 KB esbuild output)
-│   └── js/                     # Modular client-side ES modules (10 readable modules)
-│       ├── app.js              # Application entry, navigation & state
+│   ├── index.html              # Semantic HTML5 single-page application
+│   ├── css/styles.css          # Glassmorphic responsive design system (16.1 KB)
+│   ├── dist/app.js             # Pre-bundled, minified client bundle (32.9 KB esbuild output)
+│   └── js/                     # Modular client-side ES modules (10 modules, <= 300 lines each)
+│       ├── app.js              # Application entry, partial tab refreshes & focus restore
 │       ├── auth.js             # Authentication view & JWT session storage
 │       ├── events.js           # Dashboard view & event card rendering
 │       ├── budget.js           # Budget planner view & line item mutations
 │       ├── timeline.js         # Timeline milestones view & date shifts
 │       ├── vendors.js          # Vendor directory view & status updates
 │       ├── ideas.js            # AI ideas studio view & save/dismiss actions
-│       ├── ai.js               # AI draft modal & refinement proposal diffs
+│       ├── ai.js               # AI draft modal & refinement proposal banner
 │       ├── api.js              # HTTP client with generic error handling
 │       └── dom.js              # Shared DOM utilities & universal escapeHtml()
 └── src/
     ├── server.ts               # Production HTTP listener
     ├── app.ts                  # Express application setup, routes & middleware
-    ├── db/database.ts          # SQLite connection, WAL mode, migrations & schema
+    ├── container.ts            # Composition Root dependency injection container
+    ├── core.refactor.test.ts   # Core refactor tests (buildUpdate, statement cache, quotas, 502)
+    ├── db/
+    │   ├── database.ts         # SQLite connection, WAL mode, migrations & schema
+    │   └── statements.ts       # Prepared statement cache (WeakMap)
+    ├── routes/
+    │   ├── helpers.ts          # Shared route utilities (p, uid, validate, buildUpdate)
+    │   ├── authRoutes.ts       # Authentication sub-router
+    │   ├── eventRoutes.ts      # Event CRUD, budget, timeline, vendors, ideas routes
+    │   └── aiRoutes.ts         # AI draft generation, application, and refinement routes
     ├── schemas/index.ts        # Single source of truth Zod schemas & TypeScript types
     ├── domain/                 # Pure domain business logic (ZERO I/O, 97.77% coverage)
     │   ├── budget.ts           # Integer minor unit budget math & category allocations
@@ -312,6 +330,7 @@ PlanPal is completely self-contained with no external database dependencies:
     │   ├── authService.ts      # Password hashing, timing-safe login & JWTs
     │   ├── eventService.ts     # Owner-scoped event queries & cascading deletes
     │   ├── budgetService.ts    # Budget category & line item transactions
+    │   ├── timelineService.ts  # Timeline milestone use-cases & date recalculations
     │   ├── vendorService.ts    # Vendor CRM queries & updates
     │   ├── planService.ts      # Multi-table atomic plan application
     │   └── aiService.ts        # AI quotas, prompt isolation & provider dispatch
@@ -327,9 +346,7 @@ PlanPal is completely self-contained with no external database dependencies:
 ## ⚠️ Known Limitations & Design Decisions
 
 To maintain full engineering transparency:
-1. **AI Timeout & Error Mapping**: In-flight requests are bounded and aborted via `AbortSignal.timeout()`. Malformed model responses and schema validation failures map deterministically to `AiMalformedError` (502 Bad Gateway), while network interruptions and deadline limits report `AiTimeoutError` (504).
-2. **Atomic Quota Enforcement**: Daily quotas are enforced atomically via conditional `UPDATE ai_usage SET count = count + 1 WHERE count < ?` to eliminate concurrency race conditions. Failed LLM calls roll back quota consumption.
+1. **AI Timeout & Error Mapping**: In-flight requests are bounded and aborted via `AbortSignal.timeout(config.AI_TIMEOUT_MS)`. Malformed model responses and schema validation failures map deterministically to `AiMalformedError` (502 Bad Gateway), while network interruptions and timeout limits report `AiTimeoutError` (504 Gateway Timeout).
+2. **Atomic Quota Enforcement**: Daily quotas are enforced atomically via conditional `UPDATE ai_usage SET count = count + 1 WHERE count < ?` to eliminate concurrency race conditions. On the first request of each UTC day, the quota record is initialized to 1. If an AI call fails, quota is refunded via `MAX(0, count - 1)` so it never decrements below zero.
 3. **Budget Allocation Ceilings**: A category planned amount exceeding the total event budget displays an overall over-budget warning metric on the dashboard, but does not block category creation or display per-row warning badges.
 4. **Testing Environment Scope**: Rate limiters and static file middleware are bypassed in test harnesses to ensure sub-second local test execution.
-
-
