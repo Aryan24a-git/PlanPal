@@ -1,5 +1,5 @@
 node_modules/
-dist/
+/dist/
 coverage/
 data/*.db
 data/*.db-shm
@@ -7,4 +7,3 @@ data/*.db-wal
 .env*
 !.env.example
 *.log
-
