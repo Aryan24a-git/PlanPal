@@ -7,9 +7,9 @@
 import type { AIDraftPlan } from '../schemas/index.js';
 
 export interface AIProvider {
-  generateDraftPlan(params: GeneratePlanParams): Promise<AIDraftPlan>;
-  generateIdeas(params: GenerateIdeasParams): Promise<AIDraftPlan['ideas']>;
-  generateRefineDiff(params: RefineParams): Promise<RefineDiff>;
+  generateDraftPlan(params: GeneratePlanParams, signal?: AbortSignal): Promise<AIDraftPlan>;
+  generateIdeas(params: GenerateIdeasParams, signal?: AbortSignal): Promise<AIDraftPlan['ideas']>;
+  generateRefineDiff(params: RefineParams, signal?: AbortSignal): Promise<RefineDiff>;
 }
 
 export interface GeneratePlanParams {

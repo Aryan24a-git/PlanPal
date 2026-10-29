@@ -23,6 +23,8 @@ export function getDatabase(urlOverride?: string): Database.Database {
 
   _db = new Database(isMemory ? ':memory:' : path.resolve(process.cwd(), url));
   _db.pragma('journal_mode = WAL');   // concurrent reads
+  _db.pragma('synchronous = NORMAL'); // E6: safe with WAL, avoids fsync stalls
+  _db.pragma('temp_store = MEMORY');  // E6: faster temp table and sort operations
   _db.pragma('foreign_keys = ON');    // V2-02: enforce FKs + cascades
   _db.pragma('busy_timeout = 5000');  // retry on lock
 
@@ -110,6 +112,7 @@ function applySchema(db: Database.Database): void {
       FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_timeline_event ON timeline_tasks(event_id);
+    CREATE INDEX IF NOT EXISTS idx_timeline_event_status ON timeline_tasks(event_id, status);
 
     -- Vendor Items
     CREATE TABLE IF NOT EXISTS vendor_items (

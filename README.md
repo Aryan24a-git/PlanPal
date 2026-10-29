@@ -326,8 +326,8 @@ PlanPal is completely self-contained with no external database dependencies:
 ## ⚠️ Known Limitations & Design Decisions
 
 To maintain full engineering transparency:
-1. **AI Error Mapping**: Malformed model JSON maps to `AiTimeoutError` (504) rather than 502, without an automated retry. In-flight timeouts use `Promise.race` rather than early TCP socket cancellation via `AbortSignal`.
-2. **Quota Concurrency**: Quota verification and usage increment are separate operations; in high-concurrency environments, near-simultaneous calls could potentially exceed the configured daily limit. Failed LLM calls do not count against user quota.
+1. **AI Timeout & Error Mapping**: In-flight requests are bounded and aborted via `AbortSignal.timeout()`. Malformed model responses and schema validation failures map deterministically to `AiMalformedError` (502 Bad Gateway), while network interruptions and deadline limits report `AiTimeoutError` (504).
+2. **Atomic Quota Enforcement**: Daily quotas are enforced atomically via conditional `UPDATE ai_usage SET count = count + 1 WHERE count < ?` to eliminate concurrency race conditions. Failed LLM calls roll back quota consumption.
 3. **Budget Allocation Ceilings**: A category planned amount exceeding the total event budget displays an overall over-budget warning metric on the dashboard, but does not block category creation or display per-row warning badges.
 4. **Testing Environment Scope**: Rate limiters and static file middleware are bypassed in test harnesses to ensure sub-second local test execution.
 

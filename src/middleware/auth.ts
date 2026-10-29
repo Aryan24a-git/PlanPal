@@ -71,8 +71,8 @@ export function requireAuth(req: AuthRequest, _res: Response, next: NextFunction
   }
   const token = header.slice(7);
   const { userId, email, name } = authService.verifyToken(token);
-  const user = authService.getUserById(userId);
-  if (!user) {
+  // E7: Lightweight existence check — other fields come from verified JWT
+  if (!authService.userExists(userId)) {
     throw new UnauthorizedError('User account not found or deactivated');
   }
   req.userId = userId;

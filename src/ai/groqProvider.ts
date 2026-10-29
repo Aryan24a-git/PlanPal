@@ -16,7 +16,7 @@ import { config } from '../shared/config.js';
 import { logger } from '../shared/logger.js';
 
 import { AiTimeoutError, AiMalformedError } from '../shared/errors.js';
-import { AIDraftPlanSchema } from '../schemas/index.js';
+import { AIDraftPlanSchema, AIIdeasResponseSchema, RefineDiffSchema } from '../schemas/index.js';
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
@@ -40,7 +40,7 @@ const clean = (s: string) =>
     .replace(/<\/?(user_brief|user_instruction)>/gi, '')
     .slice(0, 2000);
 
-async function callGroq(messages: GroqMessage[], maxTokens: number): Promise<string> {
+async function callGroq(messages: GroqMessage[], maxTokens: number, signal?: AbortSignal): Promise<string> {
   const apiKey = config.GROQ_API_KEY;
   if (!apiKey) {
     throw new Error('GROQ_API_KEY is not set in environment');
@@ -54,6 +54,7 @@ async function callGroq(messages: GroqMessage[], maxTokens: number): Promise<str
     response_format: { type: 'json_object' },
   };
 
+  const reqSignal = signal ?? AbortSignal.timeout(config.AI_TIMEOUT_MS ?? 25000);
   let resp: Response;
   try {
     resp = await fetch(GROQ_API_URL, {
@@ -63,7 +64,7 @@ async function callGroq(messages: GroqMessage[], maxTokens: number): Promise<str
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(config.AI_TIMEOUT_MS ?? 25000),
+      signal: reqSignal,
     });
   } catch (err: unknown) {
     if ((err as Error).name === 'TimeoutError' || (err as Error).name === 'AbortError') {
@@ -185,8 +186,8 @@ Propose specific changes.`,
 }
 
 export class GroqAIProvider implements AIProvider {
-  async generateDraftPlan(p: GeneratePlanParams): Promise<AIDraftPlan> {
-    const raw = await callGroq(buildDraftPlanPrompt(p), config.AI_MAX_TOKENS);
+  async generateDraftPlan(p: GeneratePlanParams, signal?: AbortSignal): Promise<AIDraftPlan> {
+    const raw = await callGroq(buildDraftPlanPrompt(p), config.AI_MAX_TOKENS, signal);
     let parsed: AIDraftPlan;
     try {
       parsed = JSON.parse(raw);
@@ -205,10 +206,15 @@ export class GroqAIProvider implements AIProvider {
     const check = AIDraftPlanSchema.safeParse(parsed);
     if (!check.success) {
       logger.warn('Groq output failed schema on first attempt, retrying once...', { errors: check.error.issues });
-      const retryRaw = await callGroq(buildDraftPlanPrompt(p), config.AI_MAX_TOKENS);
-      const retryParsed = JSON.parse(retryRaw);
-      if (Array.isArray(retryParsed.ideas)) {
-        retryParsed.ideas = retryParsed.ideas.map((idea: { category: string }) => ({
+      const retryRaw = await callGroq(buildDraftPlanPrompt(p), config.AI_MAX_TOKENS, signal);
+      let retryParsed: unknown;
+      try {
+        retryParsed = JSON.parse(retryRaw);
+      } catch {
+        throw new AiMalformedError('AI output failed JSON parsing on retry');
+      }
+      if (typeof retryParsed === 'object' && retryParsed !== null && Array.isArray((retryParsed as { ideas?: unknown[] }).ideas)) {
+        (retryParsed as { ideas: Array<{ category: string }> }).ideas = (retryParsed as { ideas: Array<{ category: string }> }).ideas.map((idea) => ({
           ...idea,
           category: sanitizeIdeaCategory(idea.category),
           estimate: true as const,
@@ -224,20 +230,37 @@ export class GroqAIProvider implements AIProvider {
     return check.data;
   }
 
-  async generateIdeas(p: GenerateIdeasParams): Promise<AIDraftPlan['ideas']> {
-    const raw = await callGroq(buildIdeasPrompt(p), config.AI_MAX_TOKENS);
-    const parsed = JSON.parse(raw) as { ideas: AIDraftPlan['ideas'] };
-    const ideas = parsed.ideas ?? [];
-    return ideas.map((idea) => ({
+  async generateIdeas(p: GenerateIdeasParams, signal?: AbortSignal): Promise<AIDraftPlan['ideas']> {
+    const raw = await callGroq(buildIdeasPrompt(p), config.AI_MAX_TOKENS, signal);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new AiMalformedError('Groq returned invalid JSON for ideas');
+    }
+    const check = AIIdeasResponseSchema.safeParse(parsed);
+    if (!check.success) {
+      throw new AiMalformedError('AI ideas failed schema validation');
+    }
+    return check.data.ideas.map((idea) => ({
       ...idea,
       category: sanitizeIdeaCategory(idea.category),
       estimate: true as const,
     }));
   }
 
-  async generateRefineDiff(p: RefineParams): Promise<RefineDiff> {
-    const raw = await callGroq(buildRefinePrompt(p), config.AI_MAX_TOKENS);
-    const parsed = JSON.parse(raw) as RefineDiff;
-    return parsed;
+  async generateRefineDiff(p: RefineParams, signal?: AbortSignal): Promise<RefineDiff> {
+    const raw = await callGroq(buildRefinePrompt(p), config.AI_MAX_TOKENS, signal);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new AiMalformedError('Groq returned invalid JSON for refine diff');
+    }
+    const check = RefineDiffSchema.safeParse(parsed);
+    if (!check.success) {
+      throw new AiMalformedError('AI refine diff failed schema validation');
+    }
+    return check.data;
   }
 }

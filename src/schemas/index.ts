@@ -168,6 +168,21 @@ export const AIDraftPlanSchema = z.object({
 });
 export type AIDraftPlan = z.infer<typeof AIDraftPlanSchema>;
 
+export const AIIdeasResponseSchema = z.object({
+  ideas: z.array(AIDraftIdeaSchema).max(30),
+});
+
+export const RefineChangeSchema = z.object({
+  section: z.enum(['budget', 'timeline', 'vendors']),
+  action: z.enum(['add', 'remove', 'update']),
+  description: z.string().min(1).max(500),
+});
+
+export const RefineDiffSchema = z.object({
+  changes: z.array(RefineChangeSchema).max(30),
+  rationale: z.string().max(1000),
+});
+
 // Pagination query
 export const PaginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),

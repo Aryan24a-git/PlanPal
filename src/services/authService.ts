@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/database.js';
+import { prep } from '../db/statements.js';
 import { config } from '../shared/config.js';
 import { UnauthorizedError, ConflictError, NotFoundError } from '../shared/errors.js';
 import { logger } from '../shared/logger.js';
@@ -95,13 +96,17 @@ export class AuthService {
 
   /** DATA-001: Hard delete — cascade removes all events and children via FK */
   deleteAccount(userId: string): void {
-    const result = this.db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+    const result = prep(this.db, 'DELETE FROM users WHERE id = ?').run(userId);
     if (result.changes === 0) throw new NotFoundError('Account not found');
     logger.info('Account deleted', { userId });
   }
 
+  userExists(userId: string): boolean {
+    return !!prep(this.db, 'SELECT 1 FROM users WHERE id = ?').get(userId);
+  }
+
   getUserById(userId: string): UserRecord | null {
-    const row = this.db.prepare('SELECT id, email, name, created_at FROM users WHERE id = ?').get(userId) as UserRecord | undefined;
+    const row = prep(this.db, 'SELECT id, email, name, created_at FROM users WHERE id = ?').get(userId) as UserRecord | undefined;
     return row ?? null;
   }
 

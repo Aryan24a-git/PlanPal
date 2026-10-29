@@ -7,11 +7,12 @@
  */
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/database.js';
-import { MockAIProvider, type AIProvider, type GeneratePlanParams, type RefineParams } from '../ai/provider.js';
+import { prep } from '../db/statements.js';
+import { MockAIProvider, type AIProvider, type GeneratePlanParams, type RefineParams, type RefineDiff } from '../ai/provider.js';
 import { GroqAIProvider } from '../ai/groqProvider.js';
 import { normalizeAiPlan } from '../domain/aiNormalizer.js';
 import { AIDraftPlanSchema } from '../schemas/index.js';
-import { AiQuotaError, AiMalformedError, AiTimeoutError, NotFoundError } from '../shared/errors.js';
+import { AppError, AiQuotaError, AiMalformedError, AiTimeoutError, NotFoundError } from '../shared/errors.js';
 import { config } from '../shared/config.js';
 import { logger } from '../shared/logger.js';
 import type { AIDraftPlan } from '../schemas/index.js';
@@ -39,38 +40,47 @@ export class AIService {
 
   private get db() { return getDatabase(); }
 
-  // ─── Quota (SEC-005) ────────────────────────────────────────────────────────
+  // ─── Atomic Quota (SEC-005) ────────────────────────────────────────────────
   private getUsageToday(userId: string): number {
     const day = new Date().toISOString().slice(0, 10);
-    const row = this.db.prepare('SELECT count FROM ai_usage WHERE user_id = ? AND day = ?').get(userId, day) as DayUsageRow | undefined;
+    const row = prep(this.db, 'SELECT count FROM ai_usage WHERE user_id = ? AND day = ?').get(userId, day) as DayUsageRow | undefined;
     return row?.count ?? 0;
   }
 
-  private incrementUsage(userId: string): void {
+  private consumeQuotaOrThrow(userId: string): void {
     const day = new Date().toISOString().slice(0, 10);
-    this.db.prepare(`
-      INSERT INTO ai_usage (id, user_id, day, count) VALUES (?, ?, ?, 1)
-      ON CONFLICT(user_id, day) DO UPDATE SET count = count + 1
+    const limit = config.AI_DAILY_QUOTA_PER_USER;
+
+    prep(this.db, `
+      INSERT INTO ai_usage (id, user_id, day, count) VALUES (?, ?, ?, 0)
+      ON CONFLICT(user_id, day) DO NOTHING
     `).run(uuidv4(), userId, day);
+
+    const res = prep(this.db, `
+      UPDATE ai_usage SET count = count + 1 WHERE user_id = ? AND day = ? AND count < ?
+    `).run(userId, day, limit);
+
+    if (res.changes === 0) {
+      throw new AiQuotaError(`Daily AI limit of ${limit} requests reached. Try again tomorrow.`);
+    }
   }
 
-  private checkQuota(userId: string): void {
-    const used = this.getUsageToday(userId);
-    if (used >= config.AI_DAILY_QUOTA_PER_USER) {
-      throw new AiQuotaError(
-        `Daily AI limit of ${config.AI_DAILY_QUOTA_PER_USER} requests reached. Try again tomorrow.`,
-      );
-    }
+  private rollbackQuota(userId: string): void {
+    const day = new Date().toISOString().slice(0, 10);
+    prep(this.db, 'UPDATE ai_usage SET count = MAX(0, count - 1) WHERE user_id = ? AND day = ?').run(userId, day);
   }
 
   // ─── Generate Draft Plan (REQ-003) ─────────────────────────────────────────
   async generateDraftPlan(userId: string, eventId: string): Promise<{ plan: AIDraftPlan; warnings: string[] }> {
-    this.checkQuota(userId);
+    this.consumeQuotaOrThrow(userId);
 
-    const event = this.db.prepare('SELECT * FROM events WHERE id = ? AND owner_id = ?').get(eventId, userId) as {
+    const event = prep(this.db, 'SELECT * FROM events WHERE id = ? AND owner_id = ?').get(eventId, userId) as {
       type: string; event_date: string; guest_estimate: number; total_budget: number; currency: string; brief: string;
     } | undefined;
-    if (!event) throw new NotFoundError('Event not found');
+    if (!event) {
+      this.rollbackQuota(userId);
+      throw new NotFoundError('Event not found');
+    }
 
     const params: GeneratePlanParams = {
       eventType: event.type,
@@ -84,13 +94,11 @@ export class AIService {
 
     let rawPlan: AIDraftPlan;
     try {
-      const result = await Promise.race([
-        this.provider.generateDraftPlan(params),
-        new Promise<never>((_, rej) => setTimeout(() => rej(new AiTimeoutError()), config.AI_TIMEOUT_MS)),
-      ]);
-      rawPlan = result;
+      const signal = AbortSignal.timeout(config.AI_TIMEOUT_MS);
+      rawPlan = await this.provider.generateDraftPlan(params, signal);
     } catch (e) {
-      if (e instanceof AiTimeoutError || e instanceof AiQuotaError) throw e;
+      this.rollbackQuota(userId);
+      if (e instanceof AppError) throw e;
       logger.error('AI provider error', { action: 'generateDraftPlan', eventId });
       throw new AiTimeoutError('AI service unavailable');
     }
@@ -98,6 +106,7 @@ export class AIService {
     // SEC-004: Validate raw output against schema
     const parsed = AIDraftPlanSchema.safeParse(rawPlan);
     if (!parsed.success) {
+      this.rollbackQuota(userId);
       logger.warn('AI malformed output', { action: 'generateDraftPlan', eventId });
       throw new AiMalformedError();
     }
@@ -114,54 +123,57 @@ export class AIService {
       logger.warn('AI plan had dropped items', { action: 'generateDraftPlan', eventId });
     }
 
-    this.incrementUsage(userId);
-    logger.info('AI draft plan generated', { action: 'generateDraftPlan', userId, eventId, tokenEstimate: JSON.stringify(plan).length });
+    logger.info('AI draft plan generated', { action: 'generateDraftPlan', userId, eventId });
     return { plan, warnings };
   }
 
   // ─── Generate Ideas (REQ-007) ───────────────────────────────────────────────
   async generateIdeas(userId: string, eventId: string): Promise<AIDraftPlan['ideas']> {
-    this.checkQuota(userId);
+    this.consumeQuotaOrThrow(userId);
 
-    const event = this.db.prepare('SELECT * FROM events WHERE id = ? AND owner_id = ?').get(eventId, userId) as {
+    const event = prep(this.db, 'SELECT * FROM events WHERE id = ? AND owner_id = ?').get(eventId, userId) as {
       type: string; total_budget: number; currency: string; brief: string;
     } | undefined;
-    if (!event) throw new NotFoundError('Event not found');
+    if (!event) {
+      this.rollbackQuota(userId);
+      throw new NotFoundError('Event not found');
+    }
 
     let ideas: AIDraftPlan['ideas'];
     try {
-      ideas = await Promise.race([
-        this.provider.generateIdeas({
-          eventType: event.type,
-          brief: event.brief,
-          totalBudget: event.total_budget,
-          currency: event.currency,
-          userId,
-        }),
-        new Promise<never>((_, rej) => setTimeout(() => rej(new AiTimeoutError()), config.AI_TIMEOUT_MS)),
-      ]);
+      const signal = AbortSignal.timeout(config.AI_TIMEOUT_MS);
+      ideas = await this.provider.generateIdeas({
+        eventType: event.type,
+        brief: event.brief,
+        totalBudget: event.total_budget,
+        currency: event.currency,
+        userId,
+      }, signal);
     } catch (e) {
-      if (e instanceof AiTimeoutError || e instanceof AiQuotaError) throw e;
+      this.rollbackQuota(userId);
+      if (e instanceof AppError) throw e;
       throw new AiTimeoutError('AI ideas service unavailable');
     }
 
     // Always mark all ideas with estimate: true (DATA-001)
     const safeIdeas = ideas.map((i) => ({ ...i, estimate: true as const }));
-    this.incrementUsage(userId);
     return safeIdeas;
   }
 
   // ─── Refine Diff Context Builder (Finding 6) ────────────────────────────────
   private buildPlanSummary(eventId: string): string {
-    const cats = this.db.prepare(
+    const cats = prep(
+      this.db,
       'SELECT name, planned_minor FROM budget_categories WHERE event_id = ?'
     ).all(eventId) as Array<{ name: string; planned_minor: number }>;
 
-    const tasks = this.db.prepare(
+    const tasks = prep(
+      this.db,
       'SELECT title, due_date, offset_days FROM timeline_tasks WHERE event_id = ? ORDER BY offset_days DESC LIMIT 8'
     ).all(eventId) as Array<{ title: string; due_date: string; offset_days: number }>;
 
-    const vendors = this.db.prepare(
+    const vendors = prep(
+      this.db,
       'SELECT category, name, status, quote_minor FROM vendor_items WHERE event_id = ? LIMIT 8'
     ).all(eventId) as Array<{ category: string; name: string; status: string; quote_minor: number | null }>;
 
@@ -182,10 +194,13 @@ export class AIService {
 
   // ─── Refine Diff (REQ-010) ──────────────────────────────────────────────────
   async generateRefineDiff(userId: string, eventId: string, instruction: string) {
-    this.checkQuota(userId);
+    this.consumeQuotaOrThrow(userId);
 
-    const event = this.db.prepare('SELECT * FROM events WHERE id = ? AND owner_id = ?').get(eventId, userId) as { type: string } | undefined;
-    if (!event) throw new NotFoundError('Event not found');
+    const event = prep(this.db, 'SELECT * FROM events WHERE id = ? AND owner_id = ?').get(eventId, userId) as { type: string } | undefined;
+    if (!event) {
+      this.rollbackQuota(userId);
+      throw new NotFoundError('Event not found');
+    }
 
     const params: RefineParams = {
       eventType: event.type,
@@ -194,15 +209,16 @@ export class AIService {
       userId,
     };
 
-    const diff = await Promise.race([
-      this.provider.generateRefineDiff(params),
-      new Promise<never>((_, rej) => setTimeout(() => rej(new AiTimeoutError()), config.AI_TIMEOUT_MS)),
-    ]).catch((e) => {
-      if (e instanceof AiTimeoutError || e instanceof AiQuotaError) throw e;
+    let diff: RefineDiff;
+    try {
+      const signal = AbortSignal.timeout(config.AI_TIMEOUT_MS);
+      diff = await this.provider.generateRefineDiff(params, signal);
+    } catch (e) {
+      this.rollbackQuota(userId);
+      if (e instanceof AppError) throw e;
       throw new AiTimeoutError('AI refine service unavailable');
-    });
+    }
 
-    this.incrementUsage(userId);
     // REQ-010: Return diff proposal — NEVER auto-apply
     return { diff, autoApplied: false };
   }

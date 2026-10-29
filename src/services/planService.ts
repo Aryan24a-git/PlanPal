@@ -4,6 +4,7 @@
  */
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/database.js';
+import { prep } from '../db/statements.js';
 import { computeDueDate } from '../domain/timeline.js';
 import { NotFoundError, ValidationError } from '../shared/errors.js';
 import { logger } from '../shared/logger.js';
@@ -39,30 +40,30 @@ export class IdeaService {
   }
 
   private assertOwns(eventId: string, ownerId: string) {
-    if (!this.db.prepare('SELECT id FROM events WHERE id = ? AND owner_id = ?').get(eventId, ownerId)) {
+    if (!prep(this.db, 'SELECT id FROM events WHERE id = ? AND owner_id = ?').get(eventId, ownerId)) {
       throw new NotFoundError('Event not found');
     }
   }
 
   listIdeas(eventId: string, ownerId: string) {
     this.assertOwns(eventId, ownerId);
-    return this.db.prepare('SELECT * FROM ai_ideas WHERE event_id = ? ORDER BY rowid').all(eventId) as IdeaRow[];
+    return prep(this.db, 'SELECT * FROM ai_ideas WHERE event_id = ? ORDER BY rowid').all(eventId) as IdeaRow[];
   }
 
   updateIdeaState(ideaId: string, eventId: string, ownerId: string, state: string) {
     this.assertOwns(eventId, ownerId);
-    const idea = this.db.prepare('SELECT id FROM ai_ideas WHERE id = ? AND event_id = ?').get(ideaId, eventId);
+    const idea = prep(this.db, 'SELECT id FROM ai_ideas WHERE id = ? AND event_id = ?').get(ideaId, eventId);
     if (!idea) throw new NotFoundError('Idea not found');
     if (!['suggested', 'saved', 'dismissed'].includes(state)) throw new ValidationError('Invalid state');
-    this.db.prepare('UPDATE ai_ideas SET state = ? WHERE id = ?').run(state, ideaId);
-    return this.db.prepare('SELECT * FROM ai_ideas WHERE id = ?').get(ideaId);
+    prep(this.db, 'UPDATE ai_ideas SET state = ? WHERE id = ?').run(state, ideaId);
+    return prep(this.db, 'SELECT * FROM ai_ideas WHERE id = ?').get(ideaId);
   }
 
   addIdeas(eventId: string, ownerId: string, ideas: Array<{ category: string; title: string; description: string; estLowMinor?: number; estHighMinor?: number }>) {
     this.assertOwns(eventId, ownerId);
+    const insertIdea = prep(this.db, 'INSERT INTO ai_ideas (id, event_id, category, title, description, est_low_minor, est_high_minor, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
     for (const idea of ideas) {
-      this.db.prepare('INSERT INTO ai_ideas (id, event_id, category, title, description, est_low_minor, est_high_minor, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-        .run(uuidv4(), eventId, idea.category, idea.title, idea.description, idea.estLowMinor ?? null, idea.estHighMinor ?? null, 'suggested');
+      insertIdea.run(uuidv4(), eventId, idea.category, idea.title, idea.description, idea.estLowMinor ?? null, idea.estHighMinor ?? null, 'suggested');
     }
   }
 }
@@ -82,43 +83,50 @@ export class PlanService {
     vendorChecklist: Array<{ category: string; name: string; notes?: string }>;
     ideas: Array<{ category: string; title: string; description: string; estLowMinor?: number; estHighMinor?: number }>;
   }): void {
-    const event = this.db.prepare('SELECT * FROM events WHERE id = ? AND owner_id = ?').get(eventId, ownerId) as EventRow | undefined;
+    const event = prep(this.db, 'SELECT * FROM events WHERE id = ? AND owner_id = ?').get(eventId, ownerId) as EventRow | undefined;
     if (!event) throw new NotFoundError('Event not found');
 
     const apply = this.db.transaction(() => {
       // Clear existing plan data
-      this.db.prepare('DELETE FROM budget_categories WHERE event_id = ?').run(eventId);
-      this.db.prepare('DELETE FROM timeline_tasks WHERE event_id = ?').run(eventId);
-      this.db.prepare('DELETE FROM vendor_items WHERE event_id = ?').run(eventId);
-      this.db.prepare('DELETE FROM ai_ideas WHERE event_id = ?').run(eventId);
+      prep(this.db, 'DELETE FROM budget_categories WHERE event_id = ?').run(eventId);
+      prep(this.db, 'DELETE FROM timeline_tasks WHERE event_id = ?').run(eventId);
+      prep(this.db, 'DELETE FROM vendor_items WHERE event_id = ?').run(eventId);
+      prep(this.db, 'DELETE FROM ai_ideas WHERE event_id = ?').run(eventId);
+
+      // E2: Prepare statements once outside loops
+      const insertCatStmt = prep(this.db, 'INSERT INTO budget_categories (id, event_id, name, planned_minor, sort_order) VALUES (?, ?, ?, ?, ?)');
+      const insertItemStmt = prep(this.db, 'INSERT INTO budget_items (id, category_id, label, planned_minor, actual_minor) VALUES (?, ?, ?, ?, ?)');
+      const insertTaskStmt = prep(this.db, 'INSERT INTO timeline_tasks (id, event_id, title, offset_days, due_date, pinned, status, priority, phase) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      const insertVendorStmt = prep(this.db, 'INSERT INTO vendor_items (id, event_id, category, name, status, note) VALUES (?, ?, ?, ?, ?, ?)');
+      const insertIdeaStmt = prep(this.db, 'INSERT INTO ai_ideas (id, event_id, category, title, description, est_low_minor, est_high_minor, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
 
       // Insert budget
       let order = 0;
       for (const cat of plan.budgetCategories) {
         const catId = uuidv4();
-        this.db.prepare('INSERT INTO budget_categories (id, event_id, name, planned_minor, sort_order) VALUES (?, ?, ?, ?, ?)').run(catId, eventId, cat.name, cat.allocatedAmount, order++);
+        insertCatStmt.run(catId, eventId, cat.name, cat.allocatedAmount, order++);
         for (const item of cat.items) {
-          this.db.prepare('INSERT INTO budget_items (id, category_id, label, planned_minor, actual_minor) VALUES (?, ?, ?, ?, ?)').run(uuidv4(), catId, item.name, item.plannedAmount, 0);
+          insertItemStmt.run(uuidv4(), catId, item.name, item.plannedAmount, 0);
         }
       }
 
       // Insert tasks
       for (const task of plan.timelineTasks) {
         const dueDate = task.dueDate ?? computeDueDate(event.event_date, task.daysBeforeEvent);
-        this.db.prepare('INSERT INTO timeline_tasks (id, event_id, title, offset_days, due_date, pinned, status, priority, phase) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(uuidv4(), eventId, task.title, task.daysBeforeEvent, dueDate, 0, 'todo', task.priority, task.phase ?? null);
+        insertTaskStmt.run(uuidv4(), eventId, task.title, task.daysBeforeEvent, dueDate, 0, 'todo', task.priority, task.phase ?? null);
       }
 
       // Insert vendors
       for (const v of plan.vendorChecklist) {
-        this.db.prepare('INSERT INTO vendor_items (id, event_id, category, name, status, note) VALUES (?, ?, ?, ?, ?, ?)').run(uuidv4(), eventId, v.category, v.name, 'to_contact', v.notes ?? null);
+        insertVendorStmt.run(uuidv4(), eventId, v.category, v.name, 'to_contact', v.notes ?? null);
       }
 
       // Insert ideas
       for (const idea of plan.ideas) {
-        this.db.prepare('INSERT INTO ai_ideas (id, event_id, category, title, description, est_low_minor, est_high_minor, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(uuidv4(), eventId, idea.category, idea.title, idea.description, idea.estLowMinor ?? null, idea.estHighMinor ?? null, 'suggested');
+        insertIdeaStmt.run(uuidv4(), eventId, idea.category, idea.title, idea.description, idea.estLowMinor ?? null, idea.estHighMinor ?? null, 'suggested');
       }
 
-      this.db.prepare('UPDATE events SET updated_at = ? WHERE id = ?').run(new Date().toISOString(), eventId);
+      prep(this.db, 'UPDATE events SET updated_at = ? WHERE id = ?').run(new Date().toISOString(), eventId);
     });
 
     apply();
