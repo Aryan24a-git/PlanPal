@@ -54,7 +54,8 @@ export function renderTimeline(tasks, eventId, onRefresh) {
           method: 'PATCH',
           body: JSON.stringify({ status: nextStatus }),
         });
-        await onRefresh();
+        await onRefresh(`.btn-toggle-task[data-id="${taskId}"]`);
+        showToast(nextStatus === 'completed' ? 'Task marked completed' : 'Task marked to-do', 'success');
       } catch (err) {
         showToast(err.message, 'error');
       }
@@ -70,7 +71,7 @@ export function renderTimeline(tasks, eventId, onRefresh) {
           method: 'PATCH',
           body: JSON.stringify({ pinned: !isPinned }),
         });
-        await onRefresh();
+        await onRefresh(`.btn-toggle-pin[data-id="${taskId}"]`);
         showToast(!isPinned ? 'Task pinned to date' : 'Task unpinned (will shift with event date)', 'info');
       } catch (err) {
         showToast(err.message, 'error');

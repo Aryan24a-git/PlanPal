@@ -65,7 +65,7 @@ export function renderVendors(vendors, currency, eventId, onRefresh) {
           method: 'PATCH',
           body: JSON.stringify({ status }),
         });
-        await onRefresh();
+        await onRefresh(`.select-vendor-status[data-id="${vendorId}"]`);
         showToast('Vendor status updated', 'success');
       } catch (err) {
         showToast(err.message, 'error');

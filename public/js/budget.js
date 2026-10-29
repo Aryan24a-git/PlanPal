@@ -123,7 +123,7 @@ export function renderBudgetCategories(categories, currency, eventId, onRefresh)
               method: 'PATCH',
               body: JSON.stringify({ actualMinor: Math.round(parsed * 100) }),
             });
-            await onRefresh();
+            await onRefresh(`.btn-edit-item-actual[data-item-id="${itemId}"]`);
             showToast('Actual cost updated', 'success');
           } catch (err) {
             showToast(err.message, 'error');
@@ -181,7 +181,7 @@ export function initBudgetForms({ getCurrentEventId, onRefresh }) {
       });
       closeModalDialog(addItemModal);
       addItemForm.reset();
-      await onRefresh();
+      await onRefresh(`.btn-add-item-to-cat[data-cat-id="${catId}"]`);
       showToast(`Item "${label}" added to budget`, 'success');
     } catch (err) {
       showToast(err.message, 'error');
