@@ -49,14 +49,7 @@ function applySchema(db: Database.Database): void {
       created_at  TEXT NOT NULL
     );
 
-    -- Sessions (V2-04)
-    CREATE TABLE IF NOT EXISTS sessions (
-      id          TEXT PRIMARY KEY,
-      user_id     TEXT NOT NULL,
-      expires_at  TEXT NOT NULL,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
-    CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+
 
     -- Events
     CREATE TABLE IF NOT EXISTS events (

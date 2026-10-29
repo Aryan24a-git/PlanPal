@@ -15,12 +15,8 @@ import { config } from '../shared/config.js';
 
 export interface AuthRequest extends Request {
   userId?: string;
-  userEmail?: string;
-  userName?: string;
   requestId?: string;
 }
-
-const authService = new AuthService();
 
 // ─── Request ID & Timing (OBS-001) ───────────────────────────────────────────
 export function requestLogger(req: AuthRequest, res: Response, next: NextFunction): void {
@@ -63,22 +59,22 @@ export function securityHeaders(_req: Request, res: Response, next: NextFunction
   next();
 }
 
-// ─── JWT Auth Guard (SEC-001, SEC-002) ───────────────────────────────────────
-export function requireAuth(req: AuthRequest, _res: Response, next: NextFunction): void {
-  const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
-    throw new UnauthorizedError('Authorization header missing or malformed');
-  }
-  const token = header.slice(7);
-  const { userId, email, name } = authService.verifyToken(token);
-  // E7: Lightweight existence check — other fields come from verified JWT
-  if (!authService.userExists(userId)) {
-    throw new UnauthorizedError('User account not found or deactivated');
-  }
-  req.userId = userId;
-  req.userEmail = email;
-  req.userName = name;
-  next();
+// ─── JWT Auth Guard Factory (SEC-001, SEC-002, Q6, Q8) ──────────────────────
+export function createRequireAuth(authService: AuthService) {
+  return function requireAuth(req: AuthRequest, _res: Response, next: NextFunction): void {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) {
+      throw new UnauthorizedError('Authorization header missing or malformed');
+    }
+    const token = header.slice(7);
+    const { userId } = authService.verifyToken(token);
+    // E7: Lightweight existence check — other fields come from verified JWT
+    if (!authService.userExists(userId)) {
+      throw new UnauthorizedError('User account not found or deactivated');
+    }
+    req.userId = userId;
+    next();
+  };
 }
 
 // ─── Global Rate Limiter (SEC-005) ───────────────────────────────────────────

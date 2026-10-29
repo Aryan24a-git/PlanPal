@@ -19,3 +19,23 @@ export function prep(db: Database.Database, sql: string): Database.Statement {
   }
   return s;
 }
+
+/**
+ * Q4: Safe dynamic UPDATE query builder with strict column whitelist.
+ * Table and column identifiers come strictly from internal column mapping constants.
+ */
+export function buildUpdate(
+  table: string,
+  columns: Record<string, string>,
+  patch: Record<string, unknown>,
+): { sql: string; vals: unknown[] } | null {
+  const sets: string[] = [];
+  const vals: unknown[] = [];
+  for (const [key, col] of Object.entries(columns)) {
+    const v = patch[key];
+    if (v === undefined) continue;
+    sets.push(`${col} = ?`);
+    vals.push(typeof v === 'boolean' ? (v ? 1 : 0) : v);
+  }
+  return sets.length > 0 ? { sql: `UPDATE ${table} SET ${sets.join(', ')}`, vals } : null;
+}

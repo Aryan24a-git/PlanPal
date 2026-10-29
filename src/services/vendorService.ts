@@ -4,6 +4,7 @@
  */
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/database.js';
+import { prep, buildUpdate } from '../db/statements.js';
 import { NotFoundError } from '../shared/errors.js';
 import { VENDOR_CATEGORIES_BY_TYPE } from '../domain/vendors.js';
 import type { EventType } from '../schemas/index.js';
@@ -36,25 +37,37 @@ export function rowToVendor(r: VendorRow) {
   };
 }
 
+const VENDOR_UPDATE_COLS: Record<string, string> = {
+  category: 'category',
+  name: 'name',
+  status: 'status',
+  contactName: 'contact_name',
+  contactEmail: 'contact_email',
+  contactPhone: 'contact_phone',
+  quoteMinor: 'quote_minor',
+  note: 'note',
+};
+
 export class VendorService {
   private get db() {
     return getDatabase();
   }
 
   private assertOwns(eventId: string, ownerId: string) {
-    const row = this.db.prepare('SELECT id FROM events WHERE id = ? AND owner_id = ?').get(eventId, ownerId);
+    const row = prep(this.db, 'SELECT id FROM events WHERE id = ? AND owner_id = ?').get(eventId, ownerId);
     if (!row) throw new NotFoundError('Event not found');
   }
 
   listVendors(eventId: string, ownerId: string) {
     this.assertOwns(eventId, ownerId);
-    return (this.db.prepare('SELECT * FROM vendor_items WHERE event_id = ? ORDER BY category, name').all(eventId) as VendorRow[]).map(rowToVendor);
+    return (prep(this.db, 'SELECT * FROM vendor_items WHERE event_id = ? ORDER BY category, name').all(eventId) as VendorRow[]).map(rowToVendor);
   }
 
   seedVendorsForEvent(eventId: string, eventType: string): void {
     const categories = VENDOR_CATEGORIES_BY_TYPE[eventType as EventType] || [];
-    const insert = this.db.prepare(
-      'INSERT INTO vendor_items (id, event_id, category, name, status) VALUES (?, ?, ?, ?, ?)'
+    const insert = prep(
+      this.db,
+      'INSERT INTO vendor_items (id, event_id, category, name, status) VALUES (?, ?, ?, ?, ?)',
     );
     for (const cat of categories) {
       insert.run(uuidv4(), eventId, cat, `TBD ${cat}`, 'to_contact');
@@ -64,43 +77,26 @@ export class VendorService {
   createVendor(eventId: string, ownerId: string, data: { category: string; name: string; status?: string; contactName?: string; contactEmail?: string; contactPhone?: string; quoteMinor?: number; note?: string }) {
     this.assertOwns(eventId, ownerId);
     const id = uuidv4();
-    this.db.prepare('INSERT INTO vendor_items (id, event_id, category, name, status, contact_name, contact_email, contact_phone, quote_minor, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    prep(this.db, 'INSERT INTO vendor_items (id, event_id, category, name, status, contact_name, contact_email, contact_phone, quote_minor, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .run(id, eventId, data.category, data.name, data.status ?? 'to_contact', data.contactName ?? null, data.contactEmail ?? null, data.contactPhone ?? null, data.quoteMinor ?? null, data.note ?? null);
-    return rowToVendor(this.db.prepare('SELECT * FROM vendor_items WHERE id = ?').get(id) as VendorRow);
+    return rowToVendor(prep(this.db, 'SELECT * FROM vendor_items WHERE id = ?').get(id) as VendorRow);
   }
 
   updateVendor(vendorId: string, eventId: string, ownerId: string, patch: Partial<{ category: string; name: string; status: string; contactName: string; contactEmail: string; contactPhone: string; quoteMinor: number; note: string }>) {
     this.assertOwns(eventId, ownerId);
-    const vendor = this.db.prepare('SELECT id FROM vendor_items WHERE id = ? AND event_id = ?').get(vendorId, eventId);
+    const vendor = prep(this.db, 'SELECT id FROM vendor_items WHERE id = ? AND event_id = ?').get(vendorId, eventId);
     if (!vendor) throw new NotFoundError('Vendor not found');
-    const sets: string[] = [];
-    const vals: unknown[] = [];
-    const map: Record<string, string> = {
-      category: 'category',
-      name: 'name',
-      status: 'status',
-      contactName: 'contact_name',
-      contactEmail: 'contact_email',
-      contactPhone: 'contact_phone',
-      quoteMinor: 'quote_minor',
-      note: 'note',
-    };
-    for (const [k, col] of Object.entries(map)) {
-      if (patch[k as keyof typeof patch] !== undefined) {
-        sets.push(`${col} = ?`);
-        vals.push(patch[k as keyof typeof patch] ?? null);
-      }
+
+    const update = buildUpdate('vendor_items', VENDOR_UPDATE_COLS, patch as Record<string, unknown>);
+    if (update) {
+      prep(this.db, `${update.sql} WHERE id = ?`).run(...update.vals, vendorId);
     }
-    if (sets.length > 0) {
-      vals.push(vendorId);
-      this.db.prepare(`UPDATE vendor_items SET ${sets.join(', ')} WHERE id = ?`).run(...vals);
-    }
-    return rowToVendor(this.db.prepare('SELECT * FROM vendor_items WHERE id = ?').get(vendorId) as VendorRow);
+    return rowToVendor(prep(this.db, 'SELECT * FROM vendor_items WHERE id = ?').get(vendorId) as VendorRow);
   }
 
-  deleteVendor(vendorId: string, eventId: string, ownerId: string) {
+  deleteVendor(vendorId: string, eventId: string, ownerId: string): void {
     this.assertOwns(eventId, ownerId);
-    const result = this.db.prepare('DELETE FROM vendor_items WHERE id = ? AND event_id = ?').run(vendorId, eventId);
+    const result = prep(this.db, 'DELETE FROM vendor_items WHERE id = ? AND event_id = ?').run(vendorId, eventId);
     if (result.changes === 0) throw new NotFoundError('Vendor not found');
   }
 }
