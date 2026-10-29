@@ -88,8 +88,8 @@ describe('REQ-008 Dashboard — event list with summaries', () => {
     const r = await request(app).get('/api/events').set(auth(token));
     expect(r.status).toBe(200);
     expect(r.body.events.length).toBeGreaterThanOrEqual(2);
-    expect(r.body.events[0].tasks_total).toBeDefined();
-    expect(r.body.events[0].actual_spent).toBeDefined();
+    expect(r.body.events[0].tasksTotal).toBeDefined();
+    expect(r.body.events[0].actualSpent).toBeDefined();
   });
 
   it('pagination: limit and offset work and total count is accurate', async () => {

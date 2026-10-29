@@ -61,8 +61,8 @@ export function createAIRouter(c: Container): Router {
     const event = eventService.getEventOrThrow(eventId, currentUserId(req));
     const { plan: normalizedPlan } = normalizeAiPlan(
       parsed.data,
-      event.total_budget,
-      event.event_date,
+      event.totalBudget,
+      event.eventDate,
       event.type as EventType,
     );
 

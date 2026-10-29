@@ -4,7 +4,7 @@
  *          timing-safe comparison, session management.
  * DATA-001: Account hard-delete cascades all event children.
  */
-import bcrypt from 'bcryptjs';
+import { hash, compare, hashSync } from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/database.js';
@@ -31,7 +31,7 @@ interface UserRow {
 const BCRYPT_ROUNDS = 12;
 
 // SEC-001: Precomputed valid bcrypt hash for timing-safe dummy comparison
-const DUMMY_HASH = bcrypt.hashSync('not-a-real-password-timing-safe', BCRYPT_ROUNDS);
+const DUMMY_HASH = hashSync('not-a-real-password-timing-safe', BCRYPT_ROUNDS);
 
 export class AuthService {
   private get db() { return getDatabase(); }
@@ -43,7 +43,7 @@ export class AuthService {
       throw new ConflictError('An account with this email already exists');
     }
 
-    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const passwordHash = await hash(password, BCRYPT_ROUNDS);
     const id = uuidv4();
     const now = new Date().toISOString();
 
@@ -71,7 +71,7 @@ export class AuthService {
 
     // SEC-001: Always run valid bcrypt compare to eliminate timing oracle on user enumeration
     const hashToCompare = row?.password_hash ?? DUMMY_HASH;
-    const valid = await bcrypt.compare(password, hashToCompare);
+    const valid = await compare(password, hashToCompare);
 
     if (!row || !valid) {
       // SEC-001: Generic message — never reveal whether email or password was incorrect

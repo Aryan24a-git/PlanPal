@@ -32,10 +32,6 @@ export function rowToCategory(r: CategoryRow) {
     name: r.name,
     plannedMinor: r.planned_minor,
     sortOrder: r.sort_order,
-    // Compatibility aliases
-    event_id: r.event_id,
-    planned_minor: r.planned_minor,
-    sort_order: r.sort_order,
   };
 }
 
@@ -47,10 +43,6 @@ export function rowToItem(r: ItemRow) {
     plannedMinor: r.planned_minor,
     actualMinor: r.actual_minor,
     note: r.note ?? undefined,
-    // Compatibility aliases
-    category_id: r.category_id,
-    planned_minor: r.planned_minor,
-    actual_minor: r.actual_minor,
   };
 }
 

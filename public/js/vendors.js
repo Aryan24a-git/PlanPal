@@ -9,7 +9,7 @@ export function renderVendors(vendors, currency, eventId, onRefresh) {
   const statsDiv = document.getElementById('vendor-stats-summary');
   const booked = vendors.filter((v) => v.status === 'booked').length;
   const quoted = vendors.filter((v) => v.status === 'quoted').length;
-  const totalQuoted = vendors.reduce((sum, v) => sum + (v.quote_minor || 0), 0);
+  const totalQuoted = vendors.reduce((sum, v) => sum + (v.quoteMinor || 0), 0);
 
   statsDiv.innerHTML = `
     <span class="date-pill">${vendors.length} Total</span>
@@ -35,10 +35,10 @@ export function renderVendors(vendors, currency, eventId, onRefresh) {
       <p class="vendor-notes">${escapeHtml(v.note || 'No notes specified')}</p>
       
       <div style="margin: 0.75rem 0; font-size:0.85rem; color:var(--text-muted);">
-        ${v.contact_name ? `<div>👤 ${escapeHtml(v.contact_name)}</div>` : ''}
-        ${v.contact_phone ? `<div>📞 ${escapeHtml(v.contact_phone)}</div>` : ''}
-        ${v.contact_email ? `<div>✉️ ${escapeHtml(v.contact_email)}</div>` : ''}
-        ${v.quote_minor ? `<div style="font-weight:600; color:var(--text-main); margin-top:0.25rem;">Quote: ${formatCurrency(v.quote_minor, currency)}</div>` : ''}
+        ${v.contactName ? `<div>👤 ${escapeHtml(v.contactName)}</div>` : ''}
+        ${v.contactPhone ? `<div>📞 ${escapeHtml(v.contactPhone)}</div>` : ''}
+        ${v.contactEmail ? `<div>✉️ ${escapeHtml(v.contactEmail)}</div>` : ''}
+        ${v.quoteMinor ? `<div style="font-weight:600; color:var(--text-main); margin-top:0.25rem;">Quote: ${formatCurrency(v.quoteMinor, currency)}</div>` : ''}
       </div>
 
       <div style="margin-top:0.5rem;">

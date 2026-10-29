@@ -23,8 +23,8 @@ export function renderTimeline(tasks, eventId, onRefresh) {
       (t) => `
     <div class="timeline-item ${t.status === 'completed' ? 'task-done' : ''}">
       <div class="task-date-box">
-        <strong>${escapeHtml(t.dueDate || t.due_date)}</strong>
-        <span style="font-size:0.7rem; color:var(--text-dim);">${escapeHtml(t.offsetDays ?? t.offset_days ?? t.days_before_event ?? 0)}d before</span>
+        <strong>${escapeHtml(t.dueDate)}</strong>
+        <span style="font-size:0.7rem; color:var(--text-dim);">${escapeHtml(t.offsetDays ?? 0)}d before</span>
       </div>
       <div class="task-content">
         <div class="task-title" style="${t.status === 'completed' ? 'text-decoration: line-through; opacity: 0.7;' : ''}">${escapeHtml(t.title)}</div>

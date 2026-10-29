@@ -1,7 +1,7 @@
 # PlanPal 🎈 — GenAI Event Planning Assistant
 
 [![PlanPal CI](https://github.com/Aryan24a-git/PlanPal/actions/workflows/ci.yml/badge.svg)](https://github.com/Aryan24a-git/PlanPal/actions)
-![Tests Passing](https://img.shields.io/badge/tests-104%2F104%20passing-brightgreen)
+![Tests Passing](https://img.shields.io/badge/tests-113%2F113%20passing-brightgreen)
 ![Domain Coverage](https://img.shields.io/badge/domain%20coverage-97.77%25-brightgreen)
 [![Gitleaks Clean](https://img.shields.io/badge/gitleaks-clean-blue)](https://github.com/Aryan24a-git/PlanPal/actions/workflows/ci.yml)
 ![Vulnerabilities](https://img.shields.io/badge/vulnerabilities-0-brightgreen)
@@ -201,7 +201,7 @@ Open **`http://localhost:4000`** in your browser.
 
 ## 🧪 Testing & Verification Pipeline
 
-Run the complete verification pipeline (File size gate, TypeScript check, 104 tests with coverage, dependency audit, and axe-core audit):
+Run the complete verification pipeline (File size gate, TypeScript check, Oxlint + ESLint check, 113 tests with coverage, dependency audit, and axe-core audit):
 
 ```bash
 npm run check:full
@@ -209,7 +209,7 @@ npm run check:full
 
 ### Individual Verification Commands
 ```bash
-# Run all 104 unit, integration, and accessibility tests
+# Run all 113 unit, integration, refactor, and accessibility tests
 npm test
 
 # Run tests with coverage report (97.77% pure domain line coverage)
@@ -286,7 +286,8 @@ PlanPal is completely self-contained with no external database dependencies:
 ├── public/
 │   ├── index.html              # Semantic, accessible HTML5 single-page application
 │   ├── css/styles.css          # Glassmorphic responsive design system
-│   └── js/                     # Modular client-side ES modules (10 files, ~13 KB gzip)
+│   ├── dist/                   # Minified single client bundle (33 KB esbuild output)
+│   └── js/                     # Modular client-side ES modules (10 readable modules)
 │       ├── app.js              # Application entry, navigation & state
 │       ├── auth.js             # Authentication view & JWT session storage
 │       ├── events.js           # Dashboard view & event card rendering

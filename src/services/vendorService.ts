@@ -34,12 +34,6 @@ export function rowToVendor(r: VendorRow) {
     contactPhone: r.contact_phone ?? undefined,
     quoteMinor: r.quote_minor ?? undefined,
     note: r.note ?? undefined,
-    // Compatibility aliases
-    event_id: r.event_id,
-    contact_name: r.contact_name ?? undefined,
-    contact_email: r.contact_email ?? undefined,
-    contact_phone: r.contact_phone ?? undefined,
-    quote_minor: r.quote_minor ?? undefined,
   };
 }
 

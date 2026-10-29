@@ -31,7 +31,7 @@ export async function apiRequest(path, options = {}) {
   const token = getToken();
   const headers = {
     'Content-Type': 'application/json',
-    ...(options.headers || {}),
+    ...options.headers,
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;

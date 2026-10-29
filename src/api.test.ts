@@ -151,7 +151,7 @@ describe('REQ-003 AI Draft Plan (generate & apply)', () => {
     const totalAlloc = (r.body.plan.budgetCategories as Array<{ allocatedAmount: number }>)
       .reduce((s: number, c: { allocatedAmount: number }) => s + c.allocatedAmount, 0);
     const event = await request(app).get(`/api/events/${eventId}`).set(auth(token));
-    expect(totalAlloc).toBe(event.body.event.total_budget);
+    expect(totalAlloc).toBe(event.body.event.totalBudget);
   });
 
   it('all tasks have dates before or on the event date', async () => {
@@ -283,7 +283,7 @@ describe('REQ-006 Vendor Checklist', () => {
     const r = await request(app).patch(`/api/events/${eventId}/vendors/${v.body.vendor.id}`).set(auth(token)).send({ status: 'quoted', quoteMinor: 300_000 });
     expect(r.status).toBe(200);
     expect(r.body.vendor.status).toBe('quoted');
-    expect(r.body.vendor.quote_minor).toBe(300_000);
+    expect(r.body.vendor.quoteMinor).toBe(300_000);
   });
 
   it('deletes a vendor', async () => {

@@ -39,7 +39,7 @@ export function renderEventsList(eventsGrid, events, onSelectEvent) {
       <div>
         <div class="card-top">
           <span class="type-pill">${escapeHtml(ev.type?.toUpperCase())}</span>
-          <span class="date-pill">${escapeHtml(ev.event_date)}</span>
+          <span class="date-pill">${escapeHtml(ev.eventDate)}</span>
         </div>
         <h2 class="event-name">${escapeHtml(ev.name)}</h2>
         <p class="card-brief">${escapeHtml(ev.brief)}</p>
@@ -47,11 +47,11 @@ export function renderEventsList(eventsGrid, events, onSelectEvent) {
       <div class="card-metrics">
         <div>
           <div class="metric-mini-label">Budget Limit</div>
-          <div class="metric-mini-val">${formatCurrency(ev.total_budget, ev.currency)}</div>
+          <div class="metric-mini-val">${formatCurrency(ev.totalBudget, ev.currency)}</div>
         </div>
         <div>
           <div class="metric-mini-label">Spent / Progress</div>
-          <div class="metric-mini-val">${formatCurrency(ev.actual_spent, ev.currency)} &bull; ${ev.tasks_done ?? 0}/${ev.tasks_total ?? 0} tasks</div>
+          <div class="metric-mini-val">${formatCurrency(ev.actualSpent, ev.currency)} &bull; ${ev.tasksDone ?? 0}/${ev.tasksTotal ?? 0} tasks</div>
         </div>
       </div>
     </div>

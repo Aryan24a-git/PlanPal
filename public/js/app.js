@@ -96,37 +96,45 @@ export async function openEventWorkspace(eventId) {
   }
 }
 
-export async function refreshBudget(eventId) {
+function restoreFocus(sel, defaultId) {
+  (sel ? document.querySelector(sel) : document.getElementById(defaultId))?.focus();
+}
+
+export async function refreshBudget(eventId, sel) {
   if (!currentEventData || currentEventData.event.id !== eventId) return;
   const budget = await apiRequest(`/api/events/${eventId}/budget`);
   currentEventData.budget = budget;
   renderBudgetMetrics(budget, currentEventData.event.currency);
-  renderBudgetCategories(budget.categories || [], currentEventData.event.currency, eventId, () => refreshBudget(eventId));
+  renderBudgetCategories(budget.categories || [], currentEventData.event.currency, eventId, (s) => refreshBudget(eventId, s));
   announce('Budget updated');
+  restoreFocus(sel, 'btn-add-category-tab');
 }
 
-export async function refreshTimeline(eventId) {
+export async function refreshTimeline(eventId, sel) {
   if (!currentEventData || currentEventData.event.id !== eventId) return;
   const { tasks } = await apiRequest(`/api/events/${eventId}/timeline`);
   currentEventData.tasks = tasks;
-  renderTimeline(tasks || [], eventId, () => refreshTimeline(eventId));
+  renderTimeline(tasks || [], eventId, (s) => refreshTimeline(eventId, s));
   announce('Timeline updated');
+  restoreFocus(sel, 'btn-add-task-tab');
 }
 
-export async function refreshVendors(eventId) {
+export async function refreshVendors(eventId, sel) {
   if (!currentEventData || currentEventData.event.id !== eventId) return;
   const { vendors } = await apiRequest(`/api/events/${eventId}/vendors`);
   currentEventData.vendors = vendors;
-  renderVendors(vendors || [], currentEventData.event.currency, eventId, () => refreshVendors(eventId));
+  renderVendors(vendors || [], currentEventData.event.currency, eventId, (s) => refreshVendors(eventId, s));
   announce('Vendors updated');
+  restoreFocus(sel, 'btn-add-vendor-tab');
 }
 
-export async function refreshIdeas(eventId) {
+export async function refreshIdeas(eventId, sel) {
   if (!currentEventData || currentEventData.event.id !== eventId) return;
   const { ideas } = await apiRequest(`/api/events/${eventId}/ideas`);
   currentEventData.ideas = ideas;
-  renderIdeas(ideas || [], currentEventData.event.currency, eventId, () => refreshIdeas(eventId));
+  renderIdeas(ideas || [], currentEventData.event.currency, eventId, (s) => refreshIdeas(eventId, s));
   announce('Ideas updated');
+  restoreFocus(sel, 'btn-generate-ideas');
 }
 
 function renderEventWorkspace() {
@@ -135,14 +143,14 @@ function renderEventWorkspace() {
 
   document.getElementById('detail-name').textContent = event.name;
   document.getElementById('detail-type-badge').textContent = event.type.toUpperCase();
-  document.getElementById('detail-date').textContent = event.event_date;
-  document.getElementById('detail-guests').textContent = `${event.guest_estimate} Guests`;
+  document.getElementById('detail-date').textContent = event.eventDate;
+  document.getElementById('detail-guests').textContent = `${event.guestEstimate} Guests`;
   document.getElementById('detail-brief').textContent = event.brief;
 
   document.getElementById('edit-event-name').value = event.name;
-  document.getElementById('edit-event-date').value = event.event_date;
-  document.getElementById('edit-event-guests').value = event.guest_estimate;
-  document.getElementById('edit-event-budget').value = (event.total_budget / 100).toFixed(0);
+  document.getElementById('edit-event-date').value = event.eventDate;
+  document.getElementById('edit-event-guests').value = event.guestEstimate;
+  document.getElementById('edit-event-budget').value = (event.totalBudget / 100).toFixed(0);
   document.getElementById('edit-event-brief').value = event.brief;
 
   renderBudgetMetrics(budget, event.currency);

@@ -14,7 +14,7 @@ export function renderIdeas(ideas, currency, eventId, onRefresh) {
 
   ideasGrid.innerHTML = ideas
     .map((idea) => {
-      const hasRange = typeof idea.est_low_minor === 'number' && typeof idea.est_high_minor === 'number' && !isNaN(idea.est_low_minor) && !isNaN(idea.est_high_minor);
+      const hasRange = typeof idea.estLowMinor === 'number' && typeof idea.estHighMinor === 'number' && !isNaN(idea.estLowMinor) && !isNaN(idea.estHighMinor);
       return `
       <div class="idea-card ${idea.state === 'dismissed' ? 'hidden' : ''}">
         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -26,7 +26,7 @@ export function renderIdeas(ideas, currency, eventId, onRefresh) {
         
         ${hasRange ? `
           <div class="idea-estimate-pill">
-            Est: ${formatCurrency(idea.est_low_minor, currency)} – ${formatCurrency(idea.est_high_minor, currency)} (Advisory)
+            Est: ${formatCurrency(idea.estLowMinor, currency)} – ${formatCurrency(idea.estHighMinor, currency)} (Advisory)
           </div>
         ` : ''}
 

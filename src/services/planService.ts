@@ -20,6 +20,19 @@ interface IdeaRow {
   state: string;
 }
 
+export function rowToIdea(r: IdeaRow) {
+  return {
+    id: r.id,
+    eventId: r.event_id,
+    category: r.category,
+    title: r.title,
+    description: r.description,
+    estLowMinor: r.est_low_minor ?? undefined,
+    estHighMinor: r.est_high_minor ?? undefined,
+    state: r.state,
+  };
+}
+
 interface EventRow {
   id: string;
   owner_id: string;
@@ -47,7 +60,7 @@ export class IdeaService {
 
   listIdeas(eventId: string, ownerId: string) {
     this.assertOwns(eventId, ownerId);
-    return prep(this.db, 'SELECT * FROM ai_ideas WHERE event_id = ? ORDER BY rowid').all(eventId) as IdeaRow[];
+    return (prep(this.db, 'SELECT * FROM ai_ideas WHERE event_id = ? ORDER BY rowid').all(eventId) as IdeaRow[]).map(rowToIdea);
   }
 
   updateIdeaState(ideaId: string, eventId: string, ownerId: string, state: string) {
@@ -56,7 +69,8 @@ export class IdeaService {
     if (!idea) throw new NotFoundError('Idea not found');
     if (!['suggested', 'saved', 'dismissed'].includes(state)) throw new ValidationError('Invalid state');
     prep(this.db, 'UPDATE ai_ideas SET state = ? WHERE id = ?').run(state, ideaId);
-    return prep(this.db, 'SELECT * FROM ai_ideas WHERE id = ?').get(ideaId);
+    const row = prep(this.db, 'SELECT * FROM ai_ideas WHERE id = ?').get(ideaId) as IdeaRow;
+    return rowToIdea(row);
   }
 
   addIdeas(eventId: string, ownerId: string, ideas: Array<{ category: string; title: string; description: string; estLowMinor?: number; estHighMinor?: number }>) {

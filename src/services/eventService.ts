@@ -45,13 +45,6 @@ export interface EventDto {
   brief: string;
   createdAt: string;
   updatedAt: string;
-  // Compatibility fields
-  owner_id: string;
-  event_date: string;
-  guest_estimate: number;
-  total_budget: number;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface EventSummaryDto {
@@ -65,13 +58,6 @@ export interface EventSummaryDto {
   actualSpent: number;
   tasksTotal: number;
   tasksDone: number;
-  // Compatibility fields
-  event_date: string;
-  total_budget: number;
-  updated_at: string;
-  actual_spent: number;
-  tasks_total: number;
-  tasks_done: number;
 }
 
 export function toEventDto(r: EventRow): EventDto {
@@ -87,12 +73,6 @@ export function toEventDto(r: EventRow): EventDto {
     brief: r.brief,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
-    owner_id: r.owner_id,
-    event_date: r.event_date,
-    guest_estimate: r.guest_estimate,
-    total_budget: r.total_budget,
-    created_at: r.created_at,
-    updated_at: r.updated_at,
   };
 }
 
@@ -142,18 +122,13 @@ export class EventService {
       this.db,
       `SELECT
         e.id, e.name, e.type, e.currency,
-        e.event_date AS eventDate, e.event_date AS event_date,
-        e.total_budget AS totalBudget, e.total_budget AS total_budget,
-        e.updated_at AS updatedAt, e.updated_at AS updated_at,
-        COALESCE((SELECT SUM(bi.actual_minor) FROM budget_items bi
-                  JOIN budget_categories bc ON bi.category_id = bc.id
-                  WHERE bc.event_id = e.id), 0) AS actual_spent,
+        e.event_date AS eventDate,
+        e.total_budget AS totalBudget,
+        e.updated_at AS updatedAt,
         COALESCE((SELECT SUM(bi.actual_minor) FROM budget_items bi
                   JOIN budget_categories bc ON bi.category_id = bc.id
                   WHERE bc.event_id = e.id), 0) AS actualSpent,
-        COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id), 0) AS tasks_total,
         COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id), 0) AS tasksTotal,
-        COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id AND status = 'completed'), 0) AS tasks_done,
         COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id AND status = 'completed'), 0) AS tasksDone
       FROM events e WHERE e.owner_id = ? ORDER BY e.created_at DESC LIMIT ? OFFSET ?`,
     ).all(ownerId, limit, offset) as EventSummaryDto[];

@@ -31,3 +31,4 @@ export function parse<T>(schema: ZodType<T>, data: unknown): T {
   }
   return result.data;
 }
+
