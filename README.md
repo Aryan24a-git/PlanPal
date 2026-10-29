@@ -3,11 +3,11 @@
 [![PlanPal CI](https://github.com/Aryan24a-git/PlanPal/actions/workflows/ci.yml/badge.svg)](https://github.com/Aryan24a-git/PlanPal/actions)
 ![Tests Passing](https://img.shields.io/badge/tests-104%2F104%20passing-brightgreen)
 ![Domain Coverage](https://img.shields.io/badge/domain%20coverage-97.77%25-brightgreen)
-![Gitleaks Clean](https://img.shields.io/badge/gitleaks-clean-blue)
+[![Gitleaks Clean](https://img.shields.io/badge/gitleaks-clean-blue)](https://github.com/Aryan24a-git/PlanPal/actions/workflows/ci.yml)
 ![Vulnerabilities](https://img.shields.io/badge/vulnerabilities-0-brightgreen)
 ![A11y Axe Core](https://img.shields.io/badge/axe--core-0%20violations-brightgreen)
-![WCAG](https://img.shields.io/badge/WCAG%202.1-AA%20Compliant-blue)
-![Node](https://img.shields.io/badge/node-%3E%3D20.x-green)
+[![WCAG 2.1 AA](https://img.shields.io/badge/WCAG%202.1%20AA-Axe--Verified%20(0%20violations)-blue)](https://github.com/Aryan24a-git/PlanPal/blob/main/axe-audit-results.json)
+![Node](https://img.shields.io/badge/node-v24.x-green)
 ![License](https://img.shields.io/badge/license-ISC-blue)
 
 > **A reliable, full-stack, AI-powered event planning copilot built with deterministic pure-domain arithmetic, strict TypeScript layering, IDOR-safe architecture, and WCAG 2.1 AA accessibility.**
@@ -91,7 +91,7 @@ PlanPal enforces a strict one-way dependency flow:
 
 ### 5. 🤝 Vendor Directory CRM
 - Pre-seeded vendor slots customized per event type (*Catering, Photography, Venue, Music, Decor*).
-- Status pipeline: `Researching` → `Contacted` → `Booked`.
+- Status pipeline: `to_contact` → `contacted` → `quoted` → `booked` (or `declined`).
 - Quote tracking and contact notes.
 
 ### 6. 💡 AI Ideas & Themes Studio
@@ -101,7 +101,7 @@ PlanPal enforces a strict one-way dependency flow:
 
 ### 7. ✨ AI Plan Refinement (Diff Proposals)
 - Natural-language instructions (e.g., *"Increase photography budget by $500 and add a rehearsal dinner task"*).
-- Produces a non-destructive proposal diff showing exact additions and budget shifts.
+- Produces structured advisory change proposals (action, description, and rationale) across budget, timeline, and vendors.
 - User can inspect and apply or discard changes without risk of corrupting existing data.
 
 ---
@@ -113,7 +113,7 @@ PlanPal enforces a strict one-way dependency flow:
 | **Account Takeover / Brute Force** | Credential stuffing, weak password storage | Salted `bcryptjs` (cost 12), timing-safe comparisons, generic error messages, deleted-token rejection | `SEC-001` |
 | **Insecure Direct Object Reference (IDOR)** | Malicious user accessing or altering another user's event | All repository queries and mutations strictly enforce `owner_id = ?`. Foreign resources return `404 Not Found`. | `SEC-002` |
 | **Input Tampering & Injection** | Malicious payloads or SQL injection | Strict Zod boundary validation on all endpoints with string caps (`brief` ≤ 2000 chars). Parameterized SQLite statements. | `SEC-003` |
-| **Prompt Injection & Malicious Output** | Prompt hijacking via brief text | Delimited user inputs (`[USER_BRIEF_START]...[USER_BRIEF_END]`); Zod schema-constrained JSON outputs. | `SEC-004` |
+| **Prompt Injection & Malicious Output** | Prompt hijacking via brief text | Delimited user inputs (`<user_brief>...</user_brief>`); Zod schema-constrained JSON outputs. | `SEC-004` |
 | **Denial of Service / AI Cost Abuse** | High-volume API calls exhausting LLM credits | Daily request quotas tracked per user in `ai_usage` table; rate-limiting middleware (`express-rate-limit`). | `SEC-005` |
 | **Cross-Site Scripting (XSS)** | Malicious script execution in user browser | Strict CSP (`script-src 'self'`, zero `'unsafe-inline'`), universal `escapeHtml()` sanitization across all templates. | `SEC-006` |
 | **Secret Leakage** | Committing API keys or secrets | `.env` gitignored; `.gitleaks.toml` allowlist; automated `gitleaks` CI scanner; startup fail-fast on placeholder secrets. | `SEC-007` |
@@ -132,7 +132,7 @@ PlanPal is built to ensure full accessibility for users navigating with keyboard
 - **Form Association**: Explicit `<label for="...">` and `aria-label` pairing for every input, select, and icon-only button.
 - **Touch Targets**: Minimum 44px hit target on all interactive elements (`styles.css`).
 - **Visible Focus**: High-contrast outline rings for keyboard navigation.
-- **Screen Reader Tested**: Verified with Windows Narrator (<kbd>Win</kbd> + <kbd>Ctrl</kbd> + <kbd>Enter</kbd>).
+- **Screen Reader Readiness**: Fully structured for screen readers (NVDA, Narrator, VoiceOver) with programmatic labels, landmark regions, and live announcements, validated via automated axe-core DOM test suites with 0 violations.
 
 ---
 
@@ -153,7 +153,7 @@ PlanPal is built to ensure full accessibility for users navigating with keyboard
 ## 🚀 Quick Start & Local Development
 
 ### Prerequisites
-- Node.js 20+ (Node v24 recommended)
+- Node.js 24 (Node v24.x recommended, tested on Node 24)
 - npm 10+
 
 ### 1. Installation

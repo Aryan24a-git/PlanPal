@@ -23,6 +23,9 @@ jobs:
       - name: File Size Gate (NFR-003)
         run: node scripts/check-line-counts.js
 
+      - name: Code Quality & Lint Gate
+        run: npm run lint
+
       - name: TypeScript Gate (NFR-001)
         run: npx tsc --noEmit
 

@@ -7,6 +7,7 @@
  *   4. Global error handler converts AppError to correct HTTP status + envelope
  */
 import express, { type Request, type Response, type NextFunction } from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -68,6 +69,7 @@ export function createApp() {
   // Trust proxy for reverse proxies (Render, Fly.io, Cloudflare) so rate limits use real client IPs
   app.set('trust proxy', 1);
 
+  app.use(compression());
   app.use(requestLogger);
   app.use(securityHeaders);
 
@@ -80,7 +82,17 @@ export function createApp() {
 
   // ─── Static Frontend (REQ-008: served before API rate limiting) ─────────
   const publicDir = path.join(__dirname, '..', 'public');
-  app.use(express.static(publicDir));
+  app.use(
+    express.static(publicDir, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache');
+        } else if (/\.(js|css|svg|png|jpg|ico)$/.test(filePath)) {
+          res.setHeader('Cache-Control', 'public, max-age=86400, must-revalidate');
+        }
+      },
+    }),
+  );
 
   // ─── API Middleware & Boundaries ──────────────────────────────────────────
   app.use(express.json({ limit: '50kb' }));  // SEC-003: body size limit
@@ -146,6 +158,7 @@ export function createApp() {
   // ─── SPA Fallback for client navigation ───────────────────────────────────
   app.use((req, res, next) => {
     if (req.method === 'GET' && !req.path.startsWith('/api')) {
+      res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(path.join(publicDir, 'index.html'));
       return;
     }
