@@ -59,11 +59,15 @@ export interface EventSummaryDto {
   name: string;
   type: string;
   eventDate: string;
-  event_date: string;
   totalBudget: number;
-  total_budget: number;
   currency: string;
   updatedAt: string;
+  actualSpent: number;
+  tasksTotal: number;
+  tasksDone: number;
+  // Compatibility fields
+  event_date: string;
+  total_budget: number;
   updated_at: string;
   actual_spent: number;
   tasks_total: number;
@@ -137,13 +141,20 @@ export class EventService {
     return prep(
       this.db,
       `SELECT
-        e.id, e.name, e.type, e.event_date, e.total_budget, e.currency, e.updated_at,
-        e.event_date AS eventDate, e.total_budget AS totalBudget, e.updated_at AS updatedAt,
+        e.id, e.name, e.type, e.currency,
+        e.event_date AS eventDate, e.event_date AS event_date,
+        e.total_budget AS totalBudget, e.total_budget AS total_budget,
+        e.updated_at AS updatedAt, e.updated_at AS updated_at,
         COALESCE((SELECT SUM(bi.actual_minor) FROM budget_items bi
                   JOIN budget_categories bc ON bi.category_id = bc.id
                   WHERE bc.event_id = e.id), 0) AS actual_spent,
+        COALESCE((SELECT SUM(bi.actual_minor) FROM budget_items bi
+                  JOIN budget_categories bc ON bi.category_id = bc.id
+                  WHERE bc.event_id = e.id), 0) AS actualSpent,
         COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id), 0) AS tasks_total,
-        COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id AND status = 'completed'), 0) AS tasks_done
+        COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id), 0) AS tasksTotal,
+        COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id AND status = 'completed'), 0) AS tasks_done,
+        COALESCE((SELECT COUNT(*) FROM timeline_tasks WHERE event_id = e.id AND status = 'completed'), 0) AS tasksDone
       FROM events e WHERE e.owner_id = ? ORDER BY e.created_at DESC LIMIT ? OFFSET ?`,
     ).all(ownerId, limit, offset) as EventSummaryDto[];
   }

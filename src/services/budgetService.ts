@@ -25,6 +25,35 @@ interface ItemRow {
   note: string | null;
 }
 
+export function rowToCategory(r: CategoryRow) {
+  return {
+    id: r.id,
+    eventId: r.event_id,
+    name: r.name,
+    plannedMinor: r.planned_minor,
+    sortOrder: r.sort_order,
+    // Compatibility aliases
+    event_id: r.event_id,
+    planned_minor: r.planned_minor,
+    sort_order: r.sort_order,
+  };
+}
+
+export function rowToItem(r: ItemRow) {
+  return {
+    id: r.id,
+    categoryId: r.category_id,
+    label: r.label,
+    plannedMinor: r.planned_minor,
+    actualMinor: r.actual_minor,
+    note: r.note ?? undefined,
+    // Compatibility aliases
+    category_id: r.category_id,
+    planned_minor: r.planned_minor,
+    actual_minor: r.actual_minor,
+  };
+}
+
 const CATEGORY_UPDATE_COLS: Record<string, string> = {
   name: 'name',
   plannedMinor: 'planned_minor',
@@ -73,7 +102,8 @@ export class BudgetService {
     const id = uuidv4();
     const order = (prep(this.db, 'SELECT COALESCE(MAX(sort_order), 0) AS m FROM budget_categories WHERE event_id = ?').get(eventId) as { m: number }).m + 1;
     prep(this.db, 'INSERT INTO budget_categories (id, event_id, name, planned_minor, sort_order) VALUES (?, ?, ?, ?, ?)').run(id, eventId, name, plannedMinor, order);
-    return { id, event_id: eventId, name, planned_minor: plannedMinor, sort_order: order };
+    const row = prep(this.db, 'SELECT * FROM budget_categories WHERE id = ?').get(id) as CategoryRow;
+    return rowToCategory(row);
   }
 
   updateCategory(catId: string, eventId: string, ownerId: string, patch: { name?: string; plannedMinor?: number }) {
@@ -84,7 +114,8 @@ export class BudgetService {
     if (update) {
       prep(this.db, `${update.sql} WHERE id = ?`).run(...update.vals, catId);
     }
-    return prep(this.db, 'SELECT * FROM budget_categories WHERE id = ?').get(catId);
+    const row = prep(this.db, 'SELECT * FROM budget_categories WHERE id = ?').get(catId) as CategoryRow;
+    return rowToCategory(row);
   }
 
   deleteCategory(catId: string, eventId: string, ownerId: string): void {
@@ -98,7 +129,8 @@ export class BudgetService {
     if (!cat) throw new NotFoundError('Budget category not found');
     const id = uuidv4();
     prep(this.db, 'INSERT INTO budget_items (id, category_id, label, planned_minor, actual_minor, note) VALUES (?, ?, ?, ?, ?, ?)').run(id, catId, data.label, data.plannedMinor, data.actualMinor ?? 0, data.note ?? null);
-    return prep(this.db, 'SELECT * FROM budget_items WHERE id = ?').get(id);
+    const row = prep(this.db, 'SELECT * FROM budget_items WHERE id = ?').get(id) as ItemRow;
+    return rowToItem(row);
   }
 
   updateItem(itemId: string, catId: string, eventId: string, ownerId: string, patch: { label?: string; plannedMinor?: number; actualMinor?: number; note?: string }) {
@@ -109,7 +141,8 @@ export class BudgetService {
     if (update) {
       prep(this.db, `${update.sql} WHERE id = ?`).run(...update.vals, itemId);
     }
-    return prep(this.db, 'SELECT * FROM budget_items WHERE id = ?').get(itemId);
+    const row = prep(this.db, 'SELECT * FROM budget_items WHERE id = ?').get(itemId) as ItemRow;
+    return rowToItem(row);
   }
 
   deleteItem(itemId: string, catId: string, eventId: string, ownerId: string): void {

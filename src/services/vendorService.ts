@@ -25,15 +25,21 @@ export interface VendorRow {
 export function rowToVendor(r: VendorRow) {
   return {
     id: r.id,
-    event_id: r.event_id,
+    eventId: r.event_id,
     category: r.category,
     name: r.name,
     status: r.status,
+    contactName: r.contact_name ?? undefined,
+    contactEmail: r.contact_email ?? undefined,
+    contactPhone: r.contact_phone ?? undefined,
+    quoteMinor: r.quote_minor ?? undefined,
+    note: r.note ?? undefined,
+    // Compatibility aliases
+    event_id: r.event_id,
     contact_name: r.contact_name ?? undefined,
     contact_email: r.contact_email ?? undefined,
     contact_phone: r.contact_phone ?? undefined,
     quote_minor: r.quote_minor ?? undefined,
-    note: r.note ?? undefined,
   };
 }
 
