@@ -17,7 +17,8 @@
     "typecheck": "tsc --noEmit",
     "check:lines": "node scripts/check-line-counts.js",
     "check": "npm run check:lines && npm run lint && npm run typecheck && npm run test && npm audit",
-    "check:full": "npm run check:lines && npm run lint && npm run typecheck && npm run test:coverage && npm audit"
+    "check:full": "npm run check:lines && npm run lint && npm run typecheck && npm run test:coverage && npm audit",
+    "test:browser": "node scripts/verify-real-browser.js"
   },
   "keywords": [],
   "author": "",

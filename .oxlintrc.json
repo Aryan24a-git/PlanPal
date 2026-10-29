@@ -13,7 +13,8 @@
     "no-map-spread": "off",
     "unicorn/no-array-sort": "off",
     "unicorn/consistent-function-scoping": "off",
-    "import/no-named-as-default": "off"
+    "import/no-named-as-default": "off",
+    "no-await-in-loop": "off"
   },
   "ignorePatterns": [
     "dist/**",
