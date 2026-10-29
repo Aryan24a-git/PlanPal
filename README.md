@@ -32,7 +32,7 @@ PlanPal enforces a strict one-way dependency flow with a central composition roo
 ```
 ┌────────────────────────────────────────────────────────┐
 │                   Vanilla Web Client                   │
-│        (Bundled 32.9 KB ESModule / Glassmorphism UI)   │
+│        (Bundled 33.2 KB ESModule / Glassmorphism UI)   │
 └───────────────────────────┬────────────────────────────┘
                             │ HTTP / JSON
 ┌───────────────────────────▼────────────────────────────┐
@@ -148,7 +148,7 @@ PlanPal is engineered for keyboard and screen reader accessibility:
 | **Security & Auth** | `bcryptjs` + `jsonwebtoken` + CSP | IDOR-safe owner scoping, secure password hashing, strict security headers, cheap `SELECT 1` token validation. |
 | **AI Adapters** | Groq Cloud (`openai/gpt-oss-120b`) + `MockAIProvider` | Schema-constrained JSON generation, deterministic post-normalization, `AbortSignal.timeout` bounded execution. |
 | **Testing** | Vitest + Supertest + Vitest Coverage V8 + Axe-Core | Fast ESM test execution, pure domain unit coverage (97.77%), API integration, automated a11y. |
-| **Frontend** | Semantic HTML5, Vanilla CSS, esbuild | Pre-bundled & minified client bundle (`32.9 KB`, `~8.5 KB` gzip), instant loading, full keyboard & ARIA semantics with 0 axe-core violations. |
+| **Frontend** | Semantic HTML5, Vanilla CSS, esbuild | Pre-bundled & minified client bundle (`33.2 KB`, `8.61 KB` gzip), instant loading, full keyboard & ARIA semantics with 0 axe-core violations. |
 
 ---
 
@@ -295,7 +295,7 @@ PlanPal is completely self-contained with no external database dependencies:
 ├── public/
 │   ├── index.html              # Semantic HTML5 single-page application
 │   ├── css/styles.css          # Glassmorphic responsive design system (16.1 KB)
-│   ├── dist/app.js             # Pre-bundled, minified client bundle (32.9 KB esbuild output)
+│   ├── dist/app.js             # Pre-bundled, minified client bundle (33.2 KB esbuild output, 8.61 KB gzip)
 │   └── js/                     # Modular client-side ES modules (10 modules, <= 300 lines each)
 │       ├── app.js              # Application entry, partial tab refreshes & focus restore
 │       ├── auth.js             # Authentication view & JWT session storage

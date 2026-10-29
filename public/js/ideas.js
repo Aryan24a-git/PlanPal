@@ -51,7 +51,7 @@ export function renderIdeas(ideas, currency, eventId, onRefresh) {
           method: 'PATCH',
           body: JSON.stringify({ state: 'saved' }),
         });
-        await onRefresh(`.idea-card:has([data-id="${ideaId}"])`);
+        await onRefresh(`.btn-dismiss-idea[data-id="${ideaId}"]`);
         showToast('Idea marked as saved!', 'success');
       } catch (err) {
         showToast(err.message, 'error');

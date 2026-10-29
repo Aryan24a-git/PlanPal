@@ -254,8 +254,20 @@ async function run() {
     `);
   }
 
-  async function getActiveElementId() {
-    return await client.eval(`document.activeElement?.id || document.activeElement?.tagName`);
+  async function getActiveElementDesc() {
+    return await client.eval(`
+      (() => {
+        const el = document.activeElement;
+        if (!el) return 'none';
+        const tag = el.tagName.toLowerCase();
+        const id = el.id ? '#' + el.id : '';
+        const classes = Array.from(el.classList || []).map(c => '.' + c).join('');
+        const dataId = el.getAttribute('data-id') ? '[data-id="' + el.getAttribute('data-id') + '"]' : '';
+        const dataCatId = el.getAttribute('data-cat-id') ? '[data-cat-id="' + el.getAttribute('data-cat-id') + '"]' : '';
+        const dataItemId = el.getAttribute('data-item-id') ? '[data-item-id="' + el.getAttribute('data-item-id') + '"]' : '';
+        return tag + id + classes + dataCatId + dataItemId + dataId;
+      })()
+    `);
   }
 
   async function waitForSelector(selector, timeout = 10000) {
@@ -343,7 +355,7 @@ async function run() {
   const allocatedVal = await getText('#metric-allocated');
   console.log(`  Initial Budget Rendered -> Total: ${totalBudgetVal}, Allocated: ${allocatedVal}`);
 
-  // Test E1: Partial Refresh on Budget
+  // Test E1: Partial Refresh on Budget Item addition
   console.log('  Testing E1 Partial Refresh on Budget Item addition...');
   const catId = await client.eval(`document.querySelector('.btn-add-item-to-cat')?.dataset?.catId`);
   if (!catId) throw new Error('No category found in budget');
@@ -363,8 +375,29 @@ async function run() {
   if (getRequests.length !== 1 || !getRequests[0].url.endsWith('/budget')) {
     throw new Error('E1 Violation: Expected exactly 1 GET refresh request to /budget, got: ' + JSON.stringify(getRequests));
   }
-  const focusAfterBudget = await getActiveElementId();
-  console.log('  ✅ Budget Partial Refresh verified! Exactly 1 GET refresh fired. Focus restored to:', focusAfterBudget);
+  const focusAfterBudget = await getActiveElementDesc();
+  console.log('  ✅ Budget Item Addition verified! Focus restored to trigger:', focusAfterBudget);
+  if (!focusAfterBudget.includes('btn-add-item-to-cat')) {
+    throw new Error('Expected focus restored to .btn-add-item-to-cat, got: ' + focusAfterBudget);
+  }
+
+  // Test row-level inline actual spend edit focus restoration
+  console.log('  Testing inline actual spend edit row-level focus restoration...');
+  await waitForSelector('.btn-edit-item-actual');
+  const targetItemId = await client.eval(`document.querySelector('.btn-edit-item-actual').getAttribute('data-item-id')`);
+  await client.eval(`window.prompt = () => '1850.00';`);
+  const reqCountEdit = networkRequests.length;
+  await client.eval(`document.querySelector('.btn-edit-item-actual[data-item-id="${targetItemId}"]').click()`);
+  await sleep(400);
+  const editGets = networkRequests.slice(reqCountEdit).filter(r => r.url.includes('/api/events/') && r.method === 'GET');
+  if (editGets.length !== 1 || !editGets[0].url.endsWith('/budget')) {
+    throw new Error('E1 Violation: Expected exactly 1 GET refresh request to /budget on item edit, got: ' + JSON.stringify(editGets));
+  }
+  const focusAfterEdit = await getActiveElementDesc();
+  console.log('  ✅ Budget Inline Edit verified! Focus restored to exact row button:', focusAfterEdit);
+  if (!focusAfterEdit.includes('btn-edit-item-actual')) {
+    throw new Error('Expected focus restored to .btn-edit-item-actual, got: ' + focusAfterEdit);
+  }
 
   // Test E1: Partial Refresh on Timeline
   console.log('  Testing E1 Partial Refresh on Timeline...');
@@ -372,7 +405,8 @@ async function run() {
   await waitForSelector('.btn-toggle-task');
 
   const reqCountTimeline = networkRequests.length;
-  await client.eval(`document.querySelector('.btn-toggle-task')?.click()`);
+  const targetTaskId = await client.eval(`document.querySelector('.btn-toggle-task').getAttribute('data-id')`);
+  await client.eval(`document.querySelector('.btn-toggle-task[data-id="${targetTaskId}"]').click()`);
   await sleep(400);
 
   const timelineRequests = networkRequests.slice(reqCountTimeline).filter(r => r.url.includes('/api/events/'));
@@ -381,8 +415,11 @@ async function run() {
   if (timelineGets.length !== 1 || !timelineGets[0].url.endsWith('/timeline')) {
     throw new Error('E1 Violation: Expected exactly 1 GET refresh request to /timeline, got: ' + JSON.stringify(timelineGets));
   }
-  const focusAfterTimeline = await getActiveElementId();
-  console.log('  ✅ Timeline Partial Refresh verified! Focus restored to:', focusAfterTimeline);
+  const focusAfterTimeline = await getActiveElementDesc();
+  console.log('  ✅ Timeline Partial Refresh verified! Focus restored to exact row button:', focusAfterTimeline);
+  if (!focusAfterTimeline.includes('btn-toggle-task')) {
+    throw new Error('Expected focus restored to .btn-toggle-task, got: ' + focusAfterTimeline);
+  }
 
   // Test E1: Partial Refresh on Vendors
   console.log('  Testing E1 Partial Refresh on Vendors...');
@@ -390,9 +427,10 @@ async function run() {
   await waitForSelector('.select-vendor-status');
 
   const reqCountVendor = networkRequests.length;
+  const targetVendorId = await client.eval(`document.querySelector('.select-vendor-status').getAttribute('data-id')`);
   await client.eval(`
     (() => {
-      const sel = document.querySelector('.select-vendor-status');
+      const sel = document.querySelector('.select-vendor-status[data-id="${targetVendorId}"]');
       if (sel) {
         sel.value = 'quoted';
         sel.dispatchEvent(new Event('change', { bubbles: true }));
@@ -407,8 +445,11 @@ async function run() {
   if (vendorGets.length !== 1 || !vendorGets[0].url.endsWith('/vendors')) {
     throw new Error('E1 Violation: Expected exactly 1 GET refresh request to /vendors, got: ' + JSON.stringify(vendorGets));
   }
-  const focusAfterVendor = await getActiveElementId();
-  console.log('  ✅ Vendor Partial Refresh verified! Focus restored to:', focusAfterVendor);
+  const focusAfterVendor = await getActiveElementDesc();
+  console.log('  ✅ Vendor Partial Refresh verified! Focus restored to row selector:', focusAfterVendor);
+  if (!focusAfterVendor.includes('select-vendor-status')) {
+    throw new Error('Expected focus restored to .select-vendor-status, got: ' + focusAfterVendor);
+  }
 
   // Test E1: Partial Refresh on Ideas
   console.log('  Testing E1 Partial Refresh on Ideas...');
@@ -416,7 +457,8 @@ async function run() {
   await waitForSelector('.btn-save-idea');
 
   const reqCountIdea = networkRequests.length;
-  await client.eval(`document.querySelector('.btn-save-idea')?.click()`);
+  const targetIdeaId = await client.eval(`document.querySelector('.btn-save-idea').getAttribute('data-id')`);
+  await client.eval(`document.querySelector('.btn-save-idea[data-id="${targetIdeaId}"]').click()`);
   await sleep(400);
 
   const ideaRequests = networkRequests.slice(reqCountIdea).filter(r => r.url.includes('/api/events/'));
@@ -425,7 +467,11 @@ async function run() {
   if (ideaGets.length !== 1 || !ideaGets[0].url.endsWith('/ideas')) {
     throw new Error('E1 Violation: Expected exactly 1 GET refresh request to /ideas, got: ' + JSON.stringify(ideaGets));
   }
-  console.log('  ✅ Ideas Partial Refresh verified!');
+  const focusAfterIdea = await getActiveElementDesc();
+  console.log('  ✅ Ideas Partial Refresh verified! Focus restored to card control:', focusAfterIdea);
+  if (!focusAfterIdea.includes('btn-dismiss-idea')) {
+    throw new Error('Expected focus restored to .btn-dismiss-idea, got: ' + focusAfterIdea);
+  }
 
   // Check Dashboard Rollup
   console.log('  Verifying Dashboard spent and task rollup sync...');

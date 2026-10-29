@@ -134,7 +134,7 @@ export async function refreshIdeas(eventId, sel) {
   currentEventData.ideas = ideas;
   renderIdeas(ideas || [], currentEventData.event.currency, eventId, (s) => refreshIdeas(eventId, s));
   announce('Ideas updated');
-  restoreFocus(sel, 'btn-generate-ideas');
+  restoreFocus(sel, 'btn-generate-fresh-ideas');
 }
 
 function renderEventWorkspace() {
@@ -154,10 +154,10 @@ function renderEventWorkspace() {
   document.getElementById('edit-event-brief').value = event.brief;
 
   renderBudgetMetrics(budget, event.currency);
-  renderBudgetCategories(budget.categories || [], event.currency, event.id, () => refreshBudget(event.id));
-  renderTimeline(tasks || [], event.id, () => refreshTimeline(event.id));
-  renderVendors(vendors || [], event.currency, event.id, () => refreshVendors(event.id));
-  renderIdeas(ideas || [], event.currency, event.id, () => refreshIdeas(event.id));
+  renderBudgetCategories(budget.categories || [], event.currency, event.id, (sel) => refreshBudget(event.id, sel));
+  renderTimeline(tasks || [], event.id, (sel) => refreshTimeline(event.id, sel));
+  renderVendors(vendors || [], event.currency, event.id, (sel) => refreshVendors(event.id, sel));
+  renderIdeas(ideas || [], event.currency, event.id, (sel) => refreshIdeas(event.id, sel));
 }
 
 function setupModalTriggers() {
@@ -239,17 +239,17 @@ async function initApp() {
 
   initBudgetForms({
     getCurrentEventId: () => currentEventData?.event?.id,
-    onRefresh: () => refreshBudget(currentEventData.event.id),
+    onRefresh: (sel) => refreshBudget(currentEventData.event.id, sel),
   });
 
   initTimelineForms({
     getCurrentEventId: () => currentEventData?.event?.id,
-    onRefresh: () => refreshTimeline(currentEventData.event.id),
+    onRefresh: (sel) => refreshTimeline(currentEventData.event.id, sel),
   });
 
   initVendorForms({
     getCurrentEventId: () => currentEventData?.event?.id,
-    onRefresh: () => refreshVendors(currentEventData.event.id),
+    onRefresh: (sel) => refreshVendors(currentEventData.event.id, sel),
   });
 
   initIdeasActions({
