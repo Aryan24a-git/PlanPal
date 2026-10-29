@@ -5,7 +5,7 @@ COPY package*.json tsconfig.json ./
 RUN npm ci
 COPY src ./src
 COPY public ./public
-RUN npx tsc
+RUN npm run build
 
 FROM node:24-alpine AS runner
 RUN apk add --no-cache python3 make g++ su-exec

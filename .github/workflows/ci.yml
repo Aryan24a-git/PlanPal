@@ -29,6 +29,9 @@ jobs:
       - name: TypeScript Gate (NFR-001)
         run: npx tsc --noEmit
 
+      - name: Build Gate (Client Bundle & Server)
+        run: npm run build
+
       - name: Unit & Integration Tests (TEST-001)
         run: npx vitest run --coverage
 
